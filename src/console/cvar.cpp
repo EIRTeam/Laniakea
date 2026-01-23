@@ -22,6 +22,16 @@ void CVar::_delayed_init(const DelayedInitData &p_delayed_init) {
     }
 
     cvar_data = memnew(CVarData);
+
+    Vector<PropertyInfo> command_arguments;
+    command_arguments.resize(p_delayed_init.command_arguments.size());
+    {
+        PropertyInfo *args = command_arguments.ptrw();
+        for (int i = 0; i < p_delayed_init.command_arguments.size(); i++) {
+            args[i] = PropertyInfo((Variant::Type)p_delayed_init.command_arguments[i].type, p_delayed_init.command_arguments[i].name);
+        }
+    }
+
     *cvar_data = {
         .cvar_name = StringName(p_delayed_init.cvar_name_cstr),
         .cvar_name_str = p_delayed_init.cvar_name_cstr,
@@ -31,7 +41,8 @@ void CVar::_delayed_init(const DelayedInitData &p_delayed_init) {
         .property_hint = p_delayed_init.property_hint,
         .property_hint_text = p_delayed_init.property_hint_text_cstr,
         .flags = p_delayed_init.flags,
-        .current_value = default_value
+        .current_value = default_value,
+        .command_arguments = command_arguments
     };
     ConsoleSystem::get_singleton()->register_cvar(this);
 }
@@ -60,7 +71,7 @@ CVar CVar::create_variable(const char *p_name, int p_type, DefaultValueRaw p_def
     });
 }
 
-CVar CVar::create_command(const char *p_name, const char *p_description) {
+CVar CVar::create_command(const char *p_name, const char *p_description, std::initializer_list<DelayedPropertyInfo> p_command_arguments) {
     return CVar({
         .cvar_name_cstr = p_name,
         .type = GDEXTENSION_VARIANT_TYPE_NIL,
@@ -68,7 +79,8 @@ CVar CVar::create_command(const char *p_name, const char *p_description) {
         .description_cstr = p_description,
         .property_hint = PROPERTY_HINT_NONE,
         .property_hint_text_cstr = "",
-        .flags = FLAG_IS_COMMAND
+        .flags = FLAG_IS_COMMAND,
+        .command_arguments = {p_command_arguments}
     });
 }
 
@@ -107,6 +119,21 @@ void CVar::execute_command() {
     ConsoleSystem::get_singleton()->get_proxy(cvar_data->cvar_name)->emit_signal("command_executed");
 }
 
+void CVar::execute_command_with_args(Vector<Variant> p_args) {
+    DEV_ASSERT(is_command());
+    Ref<CVarProxy> proxy = ConsoleSystem::get_singleton()->get_proxy(cvar_data->cvar_name);
+    
+    Array args;
+    args.resize(p_args.size()+1);
+    args[0] = StringName("command_executed");
+
+    for (int i = 0; i < p_args.size(); i++) {
+        args[i+1] = p_args[i];
+    }
+
+    proxy->callv("emit_signal", args);
+}
+
 void CVar::connect_command_callback(Callable p_callable) {
     ConsoleSystem::get_singleton()->get_proxy(cvar_data->cvar_name)->connect("command_executed", p_callable);
 }
@@ -117,6 +144,11 @@ void CVar::connect_cvar_changed_callback(Callable p_callable) {
 
 void CVar::notify_cvar_changed() {
     ConsoleSystem::get_singleton()->get_proxy(cvar_data->cvar_name)->emit_signal("cvar_changed");
+}
+
+const Vector<PropertyInfo> &CVar::get_command_arguments() const {
+    DEV_ASSERT(is_command());
+    return cvar_data->command_arguments;
 }
 
 float CVar::get_float() const {

@@ -24,6 +24,11 @@ class CVar {
     enum CVarFlags {
         FLAG_IS_COMMAND = 1
     };
+public:
+    struct DelayedPropertyInfo {
+        int type;
+        const char *name;
+    };
 private:
     // We are not allowed to initialize StringNames, Strings or Variants before the engine has initialized us, hence this hack.
     struct DelayedInitData {
@@ -35,6 +40,7 @@ private:
         const char *property_hint_text_cstr = nullptr;
         BitField<CVarFlags> flags = 0;
         CVar *cvar = nullptr;
+        std::vector<DelayedPropertyInfo> command_arguments;
     };
 
     static constexpr int DELAYED_INIT_CVAR_MAX = 64;
@@ -51,9 +57,11 @@ private:
         String property_hint_text;
         BitField<CVarFlags> flags = 0;
         Variant current_value;
+        Vector<PropertyInfo> command_arguments;
     };
 
     CVarData *cvar_data = nullptr;
+    LocalVector<Callable> method_callbacks;
 
 
     void _delayed_init(const DelayedInitData &p_delayed_init);
@@ -70,7 +78,7 @@ public:
     ~CVar();
     
     static CVar create_variable(const char *p_name, int p_type, DefaultValueRaw p_default, const char *p_description, int p_property_hint = PROPERTY_HINT_NONE, const char *p_property_hint_text = "");
-    static CVar create_command(const char *p_name, const char *p_description);
+    static CVar create_command(const char *p_name, const char *p_description, std::initializer_list<DelayedPropertyInfo> p_command_arguments = {});
 
     String get_cvar_name_string() const;
     StringName get_cvar_name() const;
@@ -78,9 +86,11 @@ public:
     String get_default_value_display_string() const;
     bool is_command() const;
     void execute_command();
+    void execute_command_with_args(Vector<Variant> p_args);
     void connect_command_callback(Callable p_callable);
     void connect_cvar_changed_callback(Callable p_callable);
     void notify_cvar_changed();
+    const Vector<PropertyInfo> &get_command_arguments() const;
 
     float get_float() const;
     bool get_bool() const;

@@ -123,7 +123,7 @@ void ConsoleGUI::_show_autocomplete(const String &p_text) {
         int32_t item_idx;
 
         if (result.cvar->is_command()) {
-            item_idx = autocomplete_item_list->add_item(result.cvar->get_cvar_name_string());
+            item_idx = autocomplete_item_list->add_item(_get_command_preview(result.cvar));
         } else {
             item_idx = autocomplete_item_list->add_item(result.cvar->get_cvar_name_string() + " " + result.cvar->get_value_display_string());
         }
@@ -139,7 +139,7 @@ void ConsoleGUI::_autocomplete_accept() {
     DEV_ASSERT(cvar != nullptr);
 
     if (cvar->is_command()) {
-        line_edit->set_text(cvar->get_cvar_name_string());
+        line_edit->set_text( cvar->get_cvar_name_string() + " ");
     } else {
         line_edit->set_text(cvar->get_cvar_name_string() + " " + cvar->get_value_display_string());
     }
@@ -154,6 +154,26 @@ void ConsoleGUI::_on_log_bbcode(const String &p_text) {
 void ConsoleGUI::_on_command_submitted(const String &p_command) {
     ConsoleSystem::get_singleton()->execute_user_command(line_edit->get_text());
     line_edit->clear();
+}
+
+String ConsoleGUI::_get_command_preview(CVar *p_cvar) const {
+    DEV_ASSERT(p_cvar->is_command());
+    
+    const Vector<PropertyInfo> &property_infos = p_cvar->get_command_arguments();
+
+    if (property_infos.is_empty()) {
+        return p_cvar->get_cvar_name_string();
+    }
+
+    PackedStringArray preview_string_parts;
+    preview_string_parts.resize(property_infos.size()+1);
+    String *preview_str_parts_w = preview_string_parts.ptrw();
+    preview_str_parts_w[0] = p_cvar->get_cvar_name_string();
+    for (int i = 0; i < property_infos.size(); i++) {
+        preview_str_parts_w[i+1] = "<" + property_infos[i].name + ">";
+    }
+
+    return String(" ").join(preview_string_parts);
 }
 
 ConsoleGUI::ConsoleGUI() {

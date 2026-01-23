@@ -13,6 +13,8 @@ namespace godot {
     class ItemList;
 }
 
+class CVar;
+
 class ConsoleGUI : public Control {
     GDCLASS(ConsoleGUI, Control);
     void _notification(int p_what);
@@ -31,6 +33,7 @@ class ConsoleGUI : public Control {
     void _on_command_submitted(const String &p_command);
     Ref<ConsoleLogger> logger;
     Input::MouseMode prev_mouse_mode = Input::MOUSE_MODE_VISIBLE;
+    String _get_command_preview(CVar *p_cvar) const;
 public:
 	virtual void _shortcut_input(const Ref<InputEvent> &p_event) override;
 	virtual void _input(const Ref<InputEvent> &p_event) override;

@@ -100,6 +100,38 @@ Vector<ConsoleSystem::CVarAutocompleteResult> ConsoleSystem::do_autocomplete(con
     return result;
 }
 
+Variant parse_string_variant(const String &p_str, int p_expected_type) {
+    Variant final_value;
+    switch(p_expected_type) {
+        // Strings just pass through
+        case GDEXTENSION_VARIANT_TYPE_STRING: {
+            return p_str;
+        } break;
+        // Special case so we can support 1 as true and 0 as false, like in source.
+        case GDEXTENSION_VARIANT_TYPE_BOOL: {
+            if (p_str.is_valid_int()) {
+                final_value = p_str.to_int() > 0 ? true : false;
+            }
+        } break;
+        default: {
+            final_value = UtilityFunctions::str_to_var(p_str);
+        }
+    }
+
+    return final_value;
+}
+
+Variant parse_string_property(const String &p_str, const PropertyInfo &p_property_info, bool &r_success) {
+    Variant output_variant = parse_string_variant(p_str, p_property_info.type);
+    if (output_variant.get_type() == Variant::Type::NIL) {
+        r_success = false;
+        return Variant();
+    }
+
+    r_success = true;
+    return output_variant;
+}
+
 void ConsoleSystem::execute_user_command(const String &p_command_line) {
     const String command_line_stripped = p_command_line.strip_edges();
 
@@ -126,21 +158,15 @@ void ConsoleSystem::execute_user_command(const String &p_command_line) {
         const String value = first_space != -1 && (first_space+1) < command_line_stripped.length() ? command_line_stripped.substr(first_space+1) : "";
 
         if (!value.is_empty()) {
-            Variant final_value = cvar->cvar_data->current_value;
-
-            switch(cvar->cvar_data->type) {
-                // Special case so we can support 1 as true and 0 as false, like in source.
-                case GDEXTENSION_VARIANT_TYPE_BOOL: {
-                    if (value.is_valid_int()) {
-                        final_value = value.to_int() > 0 ? true : false;
-                    }
-                } break;
-                default: {
-                    final_value = UtilityFunctions::str_to_var(value);
-                }
-            }
+            const Variant original_value = cvar->cvar_data->current_value;
+            Variant output_value = parse_string_variant(value, cvar->cvar_data->current_value.get_type());
             
-            if (!set_cvar(cvar->get_cvar_name(), final_value)) {
+            if (output_value.get_type() == Variant::Type::NIL) {
+                print_error(vformat("Error parsing value\"%s\" for cvar \"%s\", expected a \"%s\"!", value, cvar->cvar_data->cvar_name_str, Variant::get_type_name(original_value.get_type())));
+                return;
+            }
+
+            if (!set_cvar(cvar->get_cvar_name(), output_value)) {
                 return;
             }
             _update_cvar_autosave(cvar);
@@ -151,7 +177,35 @@ void ConsoleSystem::execute_user_command(const String &p_command_line) {
             print_line_rich("[color=gray]- " + cvar->cvar_data->description + "[/color]");
         }
     } else {
-        cvar->execute_command();
+
+        const String value = first_space != -1 && (first_space+1) < command_line_stripped.length() ? command_line_stripped.substr(first_space+1) : "";
+        PackedStringArray arguments = value.split(" ");
+
+        if (value.is_empty()) {
+            arguments.clear();
+        }
+
+        if (arguments.size() != cvar->cvar_data->command_arguments.size()) {
+            print_error(vformat("Error parsing arguments for command \"%s\", got %d but expected %d", cvar->cvar_data->cvar_name, arguments.size(), cvar->cvar_data->command_arguments.size()));
+            return;
+        }
+
+        Vector<Variant> args;
+        args.resize(arguments.size());
+
+        Variant *args_w = args.ptrw();
+
+        for (int i = 0; i < arguments.size(); i++) {
+            bool success = false;
+            args_w[i] = parse_string_property(arguments[i], cvar->cvar_data->command_arguments[i], success);
+
+            if (!success) {
+                print_error(vformat("Error parsing argument %s (\"%s\") for CVar \"%s\", expected %s", i, cvar->cvar_data->cvar_name_str, cvar->cvar_data->command_arguments[i].name, Variant::get_type_name(cvar->cvar_data->command_arguments[i].type)));
+                return;
+            }
+        }
+
+        cvar->execute_command_with_args(args);
     }
 }
 
