@@ -24,6 +24,8 @@ class PlayerCharacter : public BaseCharacter {
     };
     std::array<SlotAimOcclusionInformation, WEAPON_SLOT_MAX> per_slot_aim_occlusion_info;
     TypedArray<RID> occlusion_exceptions;
+
+    BipedAnimationBase *player_animation = nullptr;
 public:
     Ref<MovementSettings> movement_settings;
     static CVar player_camera_horizontal_deadzone_radius;
@@ -51,6 +53,7 @@ public:
     void remove_occlusion_exception(RID p_exception);
 
     Vector<StringName> get_available_weapon_items(WeaponSlot p_slot) const;
+    virtual CharacterAnimationBase *create_animation() const override;
 
     PlayerCharacter();
 };

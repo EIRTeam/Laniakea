@@ -95,24 +95,10 @@ void BaseCharacter::_physics_process(double p_delta) {
         return;
     }
 
-    const Vector3 effective_vel = movement.get_effective_velocity();
-    animation->set_locomotion_effective_velocity(effective_vel);
-
-    if (effective_vel.length() > 0.1f) {
-        const Vector3 movement_direction = effective_vel.normalized();
-        const float angle = Math::rad_to_deg(movement_direction.signed_angle_to(model->get_target_facing_direction(), Vector3(0.0f, 1.0f, 0.0f)));
-        animation->set_locomotion_angle(angle);
+    if (animation != nullptr) {
+        animation->physics_update(this, p_delta);
     }
-
-    if (effective_vel.length() > 0.1f) {
-        Vector3 normalized_vel = effective_vel;
-        normalized_vel.y = 0.0f;
-        normalized_vel.normalize();
-        
-        if (normalized_vel.is_normalized()) {
-            model->set_target_facing_direction(normalized_vel);
-        }
-    }
+    
     movement.set_desired_movement_speed(get_desired_movement_speed());
     movement.set_input_vector(get_input_vector_transformed());
     movement.update(p_delta);
@@ -132,7 +118,11 @@ void BaseCharacter::_ready() {
 
     movement_settings = get_movement_settings();
     movement.initialize(movement_settings, this);
-    animation->initialize(movement_settings, model);
+    animation = create_animation();
+    if (animation != nullptr) {
+        animation->initialize(movement_settings, model);
+    }
+    add_to_group("characters");
 }
 
 Ref<MovementSettings> BaseCharacter::get_movement_settings() const {
@@ -176,11 +166,12 @@ void BaseCharacter::remove_collision_exception(RID p_body) {
 
 BaseCharacter::BaseCharacter() {
     set_physics_interpolation_mode(PHYSICS_INTERPOLATION_MODE_ON);
-    animation = memnew(BipedAnimationBase);
 }
 
 BaseCharacter::~BaseCharacter() {
-    memdelete(animation);
+    if (animation != nullptr) {
+        memdelete(animation);
+    }
 }
 
 void BaseCharacter::equip_weapon(WeaponSlot p_slot, Ref<WeaponInstanceBase> p_weapon) {

@@ -20,5 +20,6 @@ public:
     void _process(double p_delta) override;
     void _physics_process(double p_delta) override;
     virtual Vector3 get_firing_position(int p_weapon_slot) const override;
+    
     ~PlayerCharacterProtagonist();
 };

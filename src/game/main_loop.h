@@ -13,6 +13,7 @@ class LaniakeaMainLoop : public SceneTree {
 
     static CVar quit_command;
     static CVar timescale_cvar;
+    static CVar command_echo;
     double physics_time = 0.0f;
     double process_time = 0.0f;
 
@@ -32,6 +33,7 @@ public:
 
     double get_physics_time() const;
     double get_process_time() const;
+    void args_test(const String &p_echo);
 
     static LaniakeaMainLoop *get_singleton();
     LaniakeaGameRules *get_game_rules() const;

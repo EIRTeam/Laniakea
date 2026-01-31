@@ -5,10 +5,8 @@
 #include "game/base_character.h"
 #include "game/biped_animation_base.h"
 #include "game/main_loop.h"
-#include "game/player_character_milk.h"
 #include "game/movement_settings.h"
 #include "game/movement_shared.h"
-#include "game/player_character_milk.h"
 #include "game/weapon_firearm.h"
 #include "game/weapon_gravitygun.h"
 #include "game/weapon_instance.h"
@@ -90,7 +88,9 @@ void PlayerCharacter::_ready() {
 
     BaseCharacter::_ready();
 
-    animation->set_weapon_animation_type(BipedAnimationBase::WEAPON_ANIMATION_TYPE_RIFLE);
+    player_animation = Object::cast_to<BipedAnimationBase>(animation);
+
+    player_animation->set_weapon_animation_type(BipedAnimationBase::WEAPON_ANIMATION_TYPE_RIFLE);
 }
 
 void PlayerCharacter::_process(double p_delta) {
@@ -116,9 +116,9 @@ void PlayerCharacter::_process(double p_delta) {
     Vector3 camera_aim_normal;
     get_camera_aim_trajectory(camera_aim_origin, camera_aim_normal);
 
-    animation->set_aim_x_angle(-(camera_aim_normal.angle_to(Vector3(0.0f, 1.0f, 0.0f)) - Math::deg_to_rad(90.0f)));
+    player_animation->set_aim_x_angle(-(camera_aim_normal.angle_to(Vector3(0.0f, 1.0f, 0.0f)) - Math::deg_to_rad(90.0f)));
 
-    animation->set_is_aiming(is_aiming && equipped_weapons[WEAPON_SLOT_PRIMARY].is_valid());
+    player_animation->set_is_aiming(is_aiming && equipped_weapons[WEAPON_SLOT_PRIMARY].is_valid());
 
     BaseCharacter::_process(p_delta);
 }
@@ -353,4 +353,8 @@ Vector<StringName> PlayerCharacter::get_available_weapon_items(WeaponSlot p_slot
     }
 
     return weapon_items;
+}
+
+CharacterAnimationBase *PlayerCharacter::create_animation() const {
+    return memnew(BipedAnimationBase);
 }

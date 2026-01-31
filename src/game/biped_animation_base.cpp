@@ -8,6 +8,8 @@
 #include "godot_cpp/core/error_macros.hpp"
 #include "animation/inertialization_skeleton_modifier_polynomial.h"
 #include "animation/hip_rotator_modifier.h"
+#include "base_movement.h"
+#include "base_character.h"
 
 
 
@@ -172,6 +174,25 @@ void BipedAnimationBase::update(Movement::MovementSpeed p_desired_movement_speed
     prev_desired_movement_speed = p_desired_movement_speed;
     previous_animation_state = get_state_machine()->get_current_node();
     model->get_animation_tree()->advance(p_delta);
+}
+
+void BipedAnimationBase::physics_update(BaseCharacter *p_character, float p_delta) {
+    const Vector3 effective_vel = p_character->get_movement()->get_effective_velocity();
+    set_locomotion_effective_velocity(effective_vel);
+
+    if (effective_vel.length() > 0.1f) {
+        const Vector3 movement_direction = effective_vel.normalized();
+        const float angle = Math::rad_to_deg(movement_direction.signed_angle_to(model->get_target_facing_direction(), Vector3(0.0f, 1.0f, 0.0f)));
+        set_locomotion_angle(angle);
+    }
+
+    Vector3 normalized_vel = effective_vel;
+    normalized_vel.y = 0.0f;
+    normalized_vel.normalize();
+    
+    if (normalized_vel.is_normalized()) {
+        model->set_target_facing_direction(normalized_vel);
+    }
 }
 
 BipedAnimationBase::UpperBodyAnimationState BipedAnimationBase::get_current_upper_body_animation_state() const {

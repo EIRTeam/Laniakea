@@ -13,6 +13,7 @@
 #include "console/cvar.h"
 #include "console/gui/console_gui.h"
 #include "console/gui/console_logger.h"
+#include "debug/debug_overlay.h"
 #include "example_class.h"
 #include "game/base_character.h"
 #include "game/biped_animation_base.h"
@@ -24,6 +25,9 @@
 #include "game/physics_prop.h"
 #include "game/player_character.h"
 #include "game/protagonist_player_character.h"
+#include "game/rexbot/rexbot_configuration.h"
+#include "game/rexbot/rexbot_npc_base.h"
+#include "game/turret/npc_turret.h"
 #include "game/ui/radial_container.h"
 #include "game/ui/item_selector_ui.h"
 #include "game/ui/item_select_icon.h"
@@ -41,7 +45,6 @@
 #include "terrain_generator/terrain_settings.h"
 #include "indirect_mesh_instance_3d.h"
 #include "game/player_camera.h"
-#include "game/player_character_milk.h"
 #include "animation/hip_rotator_modifier.h"
 
 using namespace godot;
@@ -84,7 +87,6 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level)
 	GDREGISTER_CLASS(CharacterModel);
 	GDREGISTER_CLASS(PlayerCharacter);
 	GDREGISTER_CLASS(PlayerCharacterProtagonist);
-	GDREGISTER_CLASS(PlayerCharacterMilkCarried);
 	GDREGISTER_ABSTRACT_CLASS(BulletTrail);
 	GDREGISTER_CLASS(HipRotatorModifier3D);
 	GDREGISTER_CLASS(WeaponModel);
@@ -95,6 +97,10 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level)
 	GDREGISTER_CLASS(ItemSelectIcon);
 	
 	GDREGISTER_CLASS(InertializationSkeletonModifierPolynomial);
+	GDREGISTER_CLASS(RexbotConfiguration);
+	GDREGISTER_ABSTRACT_CLASS(RexbotNPCBase);
+	GDREGISTER_ABSTRACT_CLASS(DebugTextLineDrawer);
+	GDREGISTER_CLASS(NPCTurret);
 }
 
 void uninitialize_gdextension_types(ModuleInitializationLevel p_level) {

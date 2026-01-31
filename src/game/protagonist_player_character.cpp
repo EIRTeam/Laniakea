@@ -4,7 +4,6 @@
 #include "game/milk_animation.h"
 #include "game/movement_settings.h"
 #include "game/movement_shared.h"
-#include "game/player_character_milk.h"
 #include "godot_cpp/classes/packed_scene.hpp"
 #include "godot_cpp/classes/resource_loader.hpp"
 #include "godot_cpp/classes/engine.hpp"
@@ -79,6 +78,6 @@ Vector3 PlayerCharacterProtagonist::get_firing_position(int p_weapon_slot) const
 
 PlayerCharacterProtagonist::~PlayerCharacterProtagonist() {
     if (milk_animation) {
-        memfree(milk_animation);
+        memdelete(milk_animation);
     }
 }

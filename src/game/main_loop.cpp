@@ -5,6 +5,7 @@
 #include "godot_cpp/classes/global_constants.hpp"
 #include "godot_cpp/classes/window.hpp"
 #include "godot_cpp/classes/engine.hpp"
+#include "godot_cpp/variant/string.hpp"
 #include "godot_cpp/core/memory.hpp"
 #include "godot_cpp/core/print_string.hpp"
 
@@ -12,6 +13,8 @@ LaniakeaMainLoop *LaniakeaMainLoop::singleton = nullptr;
 
 CVar LaniakeaMainLoop::quit_command = CVar::create_command("quit", "Quits the game");
 CVar LaniakeaMainLoop::timescale_cvar = CVar::create_variable("timescale", GDEXTENSION_VARIANT_TYPE_FLOAT, 1.0f, "Changes the game's speed", PROPERTY_HINT_NONE, "");
+CVar LaniakeaMainLoop::command_echo = CVar::create_command("echo", "Prints back a given message.", { CVar::DelayedPropertyInfo(Variant::STRING, "message") });
+
 
 void LaniakeaMainLoop::_on_timescale_cvar_changed() {
     Engine::get_singleton()->set_time_scale(timescale_cvar.get_float());
@@ -43,6 +46,8 @@ void LaniakeaMainLoop::_initialize() {
     timescale_cvar.connect_cvar_changed_callback(callable_mp(this, &LaniakeaMainLoop::_on_timescale_cvar_changed));
 
     singleton = this;
+
+    command_echo.connect_command_callback(callable_mp(this, &LaniakeaMainLoop::args_test));
 }
 
 bool LaniakeaMainLoop::_process(double p_delta) {
@@ -75,6 +80,10 @@ double LaniakeaMainLoop::get_physics_time() const {
 
 double LaniakeaMainLoop::get_process_time() const {
     return process_time;
+}
+
+void LaniakeaMainLoop::args_test(const String &p_echo) {
+    print_line("Echoed: ", p_echo);
 }
 
 LaniakeaMainLoop *LaniakeaMainLoop::get_singleton() {

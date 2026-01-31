@@ -1,13 +1,16 @@
 #include "debug_overlay.h"
 #include "debug/debug_shaders.h"
+#include "debug/debug_text_line_drawer.h"
 #include "game/main_loop.h"
 #include "gdextension_interface.h"
+#include "godot_cpp/classes/cylinder_mesh.hpp"
 #include "godot_cpp/classes/cylinder_shape3d.hpp"
 #include "godot_cpp/classes/geometry_instance3d.hpp"
 #include "godot_cpp/classes/immediate_mesh.hpp"
 #include "godot_cpp/classes/engine.hpp"
 #include "godot_cpp/classes/main_loop.hpp"
 #include "godot_cpp/classes/node.hpp"
+#include "godot_cpp/classes/text_mesh.hpp"
 #include "godot_cpp/classes/time.hpp"
 #include "godot_cpp/classes/mesh_instance3d.hpp"
 #include "godot_cpp/classes/scene_tree.hpp"
@@ -15,6 +18,7 @@
 #include "godot_cpp/classes/window.hpp"
 #include "debug_constexpr.h"
 #include "godot_cpp/core/error_macros.hpp"
+#include "godot_cpp/variant/packed_int32_array.hpp"
 
 DebugOverlay *DebugOverlay::singleton = nullptr;
 CVar DebugOverlay::overlays_frozen_cvar = CVar::create_variable("debug_overlays.frozen", GDEXTENSION_VARIANT_TYPE_BOOL, false, "If 1 freezes debug overlays", PROPERTY_HINT_NONE, "");
@@ -23,10 +27,14 @@ void DebugOverlay::initialize(SceneTree *p_main_loop) {
     if constexpr (!Debug::is_debug_enabled) {
         return;
     }
+
     singleton = this;
     root_node = memnew(Node3D);
     p_main_loop->get_root()->add_child(root_node);
     root_node->set_as_top_level(true);
+
+    text_line_drawer = memnew(DebugTextLineDrawer);
+    root_node->add_child(text_line_drawer);
 
     // Cylinder mesh
     {
@@ -133,11 +141,18 @@ void DebugOverlay::advance(ProcessPass p_pass) {
     if (overlays_frozen_cvar.get_bool()) {
         return;
     }
+    text_line_drawer->clear_strings();
+
     for (int i = overlays.size()-1; i >= 0; i--) {
         const Overlay &overlay = overlays[i];
         if (overlay.process_pass != p_pass) {
             continue;
         }
+
+        if (overlay.debug_text.has_value()) {
+            text_line_drawer->add_string(overlay.debug_text->world_pos, overlay.debug_text->text);
+        }
+
         if (overlay.end_time <= (Time::get_singleton()->get_ticks_usec() / 1000000.0f)) {
             _dispose_overlay(i);            
         }
@@ -341,6 +356,54 @@ void DebugOverlay::horz_circle(const Vector3 &p_at, const float p_radius, const 
     overlay.nodes.push_back(mesh);
 
     singleton->_register_overlay(overlay);
+}
+
+void DebugOverlay::cone(const Vector3 &p_from, const Vector3 &p_to, const float p_angle, const Color &p_color, const bool p_depth_test, const float p_duration)
+{
+    if constexpr (!Debug::is_debug_enabled) {
+        return;
+    }
+
+    const int CONE_MESH_RESOLUTION = 16;
+
+    const Vector3 diff = p_to - p_from;
+    const float diff_length = diff.length();
+    const Vector3 dir = diff / diff_length;
+
+    Ref<CylinderMesh> cylinder_mesh;
+    cylinder_mesh.instantiate();
+    cylinder_mesh->set_bottom_radius(0.0f);
+    cylinder_mesh->set_height(diff_length);
+
+    cylinder_mesh->set_top_radius(cylinder_mesh->get_height() * Math::tan(p_angle));
+	MeshInstance3D *mi = _create_mesh_instance(cylinder_mesh, p_color, p_depth_test);
+    mi->set_position(p_from + dir * (diff_length * 0.5f));
+    Basis new_basis;
+    new_basis.set_column(0, dir.cross(Vector3(0.0f, 1.0f, 0.0f)).normalized());
+    new_basis.set_column(1, dir);
+    new_basis.set_column(2, new_basis.get_column(0).cross(new_basis.get_column(1)).normalized());
+    
+    mi->set_basis(new_basis);
+
+    Vector<Node3D*> nodes;
+    nodes.push_back(mi);
+
+    singleton->_register_overlay({
+        .nodes = nodes,
+        .end_time = (Time::get_singleton()->get_ticks_usec() / 1000000.0f) + p_duration
+    });
+
+    DebugOverlay::line(p_from, p_to, Color(1.0, 0.0, 0.0), false);
+}
+
+void DebugOverlay::text(const Vector3 &p_at, const String &p_text, const Color &p_color, const bool p_depth_test, const float p_duration) {
+    singleton->_register_overlay({
+        .debug_text = DebugText {
+            .world_pos = p_at,
+            .text = p_text
+        },
+        .end_time = (Time::get_singleton()->get_ticks_usec() / 1000000.0f) + p_duration
+    });
 }
 
 DebugOverlay::~DebugOverlay() {

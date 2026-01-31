@@ -1,11 +1,13 @@
 #pragma once
 
+#include "game/character_animation_base.h"
 #include "game/character_model.h"
 #include "game/movement_settings.h"
 #include "game/movement_shared.h"
 #include "godot_cpp/classes/animation_node_state_machine_playback.hpp"
 #include "godot_cpp/classes/curve.hpp"
-class BipedAnimationBase : public Object {
+
+class BipedAnimationBase : public CharacterAnimationBase {
     GDCLASS(BipedAnimationBase, Object);
 public:
     enum LocomotionAnimationState {
@@ -57,8 +59,9 @@ public:
     void _update_locomotion_blend_state();
     void set_locomotion_state(LocomotionAnimationState p_locomotion_state);
     LocomotionAnimationState get_locomotion_state() const;
-    void initialize(Ref<MovementSettings> p_movement_settings, CharacterModel *p_model);
-    virtual void update(Movement::MovementSpeed p_desired_movement_speed, float p_delta);
+    virtual void initialize(Ref<MovementSettings> p_movement_settings, CharacterModel *p_model) override;
+    virtual void update(Movement::MovementSpeed p_desired_movement_speed, float p_delta) override;
+    virtual void physics_update(BaseCharacter *p_character, float p_delta) override;
 
     Vector3 get_locomotion_effective_velocity() const { return locomotion_effective_velocity; }
     void set_locomotion_effective_velocity(const Vector3 &locomotionEffectiveVelocity) { locomotion_effective_velocity = locomotionEffectiveVelocity; }

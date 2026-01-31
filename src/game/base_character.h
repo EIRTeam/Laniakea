@@ -2,6 +2,7 @@
 
 #include "game/base_movement.h"
 #include "game/biped_animation_base.h"
+#include "game/character_animation_base.h"
 #include "game/character_model.h"
 #include "godot_cpp/core/binder_common.hpp"
 #include "godot_cpp/core/error_macros.hpp"
@@ -15,7 +16,7 @@ class BaseCharacter : public Node3D {
     GDCLASS(BaseCharacter, Node3D);
 protected:
     BaseMovement movement;
-    BipedAnimationBase* animation = nullptr;
+    CharacterAnimationBase* animation = nullptr;
 public:
     enum WeaponSlot {
         WEAPON_SLOT_PRIMARY,
@@ -82,6 +83,9 @@ public:
     void remove_collision_exception(RID p_body);
 
     virtual Vector<StringName> get_available_items(WeaponSlot p_slot) const { return Vector<StringName>(); }
+    virtual CharacterAnimationBase *create_animation() const = 0;
+
+    BaseMovement *get_movement() { return &movement; };
 };
 
 VARIANT_ENUM_CAST(BaseCharacter::WeaponSlot)
