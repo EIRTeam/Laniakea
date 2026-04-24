@@ -62,5 +62,6 @@ public:
     static void horz_circle(const Vector3 &p_at, const float p_radius, const Color &p_color, const bool p_depth_test = true, const float p_duration = 0.0f);
     static void cone(const Vector3 &p_from, const Vector3 &p_to, const float p_angle, const Color &p_color, const bool p_depth_test = true, const float p_duration = 0.0f);
     static void text(const Vector3 &p_at, const String &p_text, const Color &p_color, const bool p_depth_test = true, const float p_duration = 0.0f);
+    static void mesh_with_trf(const Transform3D &p_trf, const Ref<Mesh> &p_mesh, const bool p_depth_test = true, const float p_duration = 0.0f);
     ~DebugOverlay();
 };

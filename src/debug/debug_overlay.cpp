@@ -10,6 +10,7 @@
 #include "godot_cpp/classes/engine.hpp"
 #include "godot_cpp/classes/main_loop.hpp"
 #include "godot_cpp/classes/node.hpp"
+#include "godot_cpp/classes/resource_saver.hpp"
 #include "godot_cpp/classes/text_mesh.hpp"
 #include "godot_cpp/classes/time.hpp"
 #include "godot_cpp/classes/mesh_instance3d.hpp"
@@ -358,8 +359,7 @@ void DebugOverlay::horz_circle(const Vector3 &p_at, const float p_radius, const 
     singleton->_register_overlay(overlay);
 }
 
-void DebugOverlay::cone(const Vector3 &p_from, const Vector3 &p_to, const float p_angle, const Color &p_color, const bool p_depth_test, const float p_duration)
-{
+void DebugOverlay::cone(const Vector3 &p_from, const Vector3 &p_to, const float p_angle, const Color &p_color, const bool p_depth_test, const float p_duration) {
     if constexpr (!Debug::is_debug_enabled) {
         return;
     }
@@ -397,11 +397,37 @@ void DebugOverlay::cone(const Vector3 &p_from, const Vector3 &p_to, const float 
 }
 
 void DebugOverlay::text(const Vector3 &p_at, const String &p_text, const Color &p_color, const bool p_depth_test, const float p_duration) {
+    if constexpr (!Debug::is_debug_enabled) {
+        return;
+    }
+
     singleton->_register_overlay({
         .debug_text = DebugText {
             .world_pos = p_at,
             .text = p_text
         },
+        .end_time = (Time::get_singleton()->get_ticks_usec() / 1000000.0f) + p_duration
+    });
+}
+
+void DebugOverlay::mesh_with_trf(const Transform3D &p_trf, const Ref<Mesh> &p_mesh, const bool p_depth_test, const float p_duration) {
+    if constexpr (!Debug::is_debug_enabled) {
+        return;
+    }
+    MeshInstance3D *mesh = _create_mesh_instance(p_mesh, Color(1.0, 1.0, 1.0, 1.0), p_depth_test);
+    mesh->set_material_override(Ref<Material>());
+    if (!p_mesh.is_valid()) {
+        print_line("INVALI!?");
+    }
+    mesh->set_transform(p_trf);
+
+    ResourceSaver::get_singleton()->save(p_mesh, "res://debugmesh.tres");
+
+    Vector<Node3D*> nodes;
+    nodes.push_back(mesh);
+
+    singleton->_register_overlay({
+        .nodes = nodes,
         .end_time = (Time::get_singleton()->get_ticks_usec() / 1000000.0f) + p_duration
     });
 }
