@@ -7,6 +7,7 @@
 #include "game/main_loop.h"
 #include "game/movement_settings.h"
 #include "game/movement_shared.h"
+#include "game/weapon_counter_shield.h"
 #include "game/weapon_firearm.h"
 #include "game/weapon_gravitygun.h"
 #include "game/weapon_instance.h"
@@ -356,6 +357,7 @@ Vector<StringName> PlayerCharacter::get_available_weapon_items(WeaponSlot p_slot
         weapon_items.push_back("weapon_rifle_test_item");
     } else if (p_slot == WEAPON_SLOT_SECONDARY) {
         weapon_items.push_back("weapon_gravitygun_item");
+        weapon_items.push_back("weapon_counter_shield_item");
     }
 
     return weapon_items;

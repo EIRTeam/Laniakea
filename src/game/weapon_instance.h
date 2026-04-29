@@ -16,6 +16,8 @@ public:
         bool fire = false;
     };
     static void _bind_methods();
+    virtual void equipped(int p_weapon_slot, BaseCharacter *p_character) {};
+    virtual void unequipped(int p_weapon_slot, BaseCharacter *p_character) {};
     virtual void post_update(int p_weapon_slot, BaseCharacter *p_character, const WeaponButtonState &p_button_state) {}
     virtual void primary_attack(int p_weapon_slot, const WeaponButtonState &p_button_state, BaseCharacter *p_character) = 0;
     virtual bool uses_occluded_crosshair() const;

@@ -1,4 +1,5 @@
 #include "game_rules_laniakea.h"
+#include "game/weapon_counter_shield.h"
 #include "game/weapon_gravitygun.h"
 #include "game/weapon_rifle_test.h"
 #include "gdextension_interface.h"
@@ -21,7 +22,13 @@ void LaniakeaGameRules::initialize() {
         .localization_description = "#LN_GravityGun_Description",
         .icon = ResourceLoader::get_singleton()->load("uid://bn1exrtn22bju")
     });
+    register_item_type("weapon_counter_shield_item", {
+        .localization_name = "#LN_CounterShield",
+        .localization_description = "#LN_CounterShield_Description",
+        .icon = ResourceLoader::get_singleton()->load("uid://bn1exrtn22bju")
+    });
     register_weapon<WeaponGravityGun>("weapon_gravitygun");
     register_weapon<WeaponRifleTest>("weapon_rifle_test");
+    register_weapon<WeaponCounterShield>("weapon_counter_shield");
     GameRules::initialize();
 }
