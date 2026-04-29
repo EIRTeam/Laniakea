@@ -39,9 +39,14 @@ void PlayerCharacter::_bind_methods() {
     MAKE_BIND_NODE(PlayerCharacter, player_ui, PlayerUI);
 }
 
-Vector2 PlayerCharacter::get_input_vector_transformed() const {
-    Vector2 input_vector = get_input_vector();
+Vector2 PlayerCharacter::get_movement_vector_transformed() const {
+    Vector2 input_vector = get_movement_vector();
     return camera->transform_input(input_vector);
+}
+
+BitField<BaseCharacter::InputActionState> PlayerCharacter::get_action_state(InputCommand p_command) const {
+    ERR_FAIL_INDEX_V(p_command, input_state.button_states.size(), 0);
+    return input_state.button_states[p_command];
 }
 
 PlayerCharacter::PlayerCharacter() {
@@ -127,7 +132,6 @@ void PlayerCharacter::_physics_process(double p_delta) {
     if (Engine::get_singleton()->is_editor_hint()) {
         return;
     }   
-    CharacterInputState input;
     static StringName move_left = "move_left";
     static StringName move_right = "move_right";
     static StringName move_forward = "move_forward";
@@ -141,13 +145,12 @@ void PlayerCharacter::_physics_process(double p_delta) {
         return inst.is_valid();
     });
 
-    input.movement_input = Input::get_singleton()->get_vector(move_left, move_right, move_forward, move_back);
-    input.button_states[InputCommand::AIM] = get_action_state(aim) && has_any_weapon; // Bit of a HACK but ehhh
-    input.button_states[InputCommand::PRIMARY_FIRE] = get_action_state(primary_fire);
-    input.button_states[InputCommand::SECONDARY_FIRE] = get_action_state(secondary_fire);
-    input.button_states[InputCommand::SPRINT] = get_action_state(sprint);
+    input_state.movement_input = Input::get_singleton()->get_vector(move_left, move_right, move_forward, move_back);
+    input_state.button_states[InputCommand::AIM] = has_any_weapon ? _get_action_state(aim) : BitField<InputActionState>(0); // Bit of a HACK but ehhh
+    input_state.button_states[InputCommand::PRIMARY_FIRE] = _get_action_state(primary_fire);
+    input_state.button_states[InputCommand::SECONDARY_FIRE] = _get_action_state(secondary_fire);
+    input_state.button_states[InputCommand::SPRINT] = _get_action_state(sprint);
     
-    set_input_state(input);
     _movement_physics_process(p_delta);
     BaseCharacter::_physics_process(p_delta);
 }
@@ -252,22 +255,6 @@ void PlayerCharacter::_movement_physics_process(float p_delta) {
 
     camera->set_framing(target_camera_framing, false);
     camera->set_distance(target_camera_distance, false);
-
-    for (int slot_i = 0; slot_i < WEAPON_SLOT_MAX; slot_i++) {
-        Ref<WeaponInstanceBase> equipped_weapon = equipped_weapons[slot_i];
-        const InputCommand input_command = slot_i == WEAPON_SLOT_PRIMARY ? InputCommand::PRIMARY_FIRE : InputCommand::SECONDARY_FIRE;
-        const bool primary_pressed = is_action_pressed(input_command);
-        if (equipped_weapon.is_valid()) {
-            WeaponInstanceBase::WeaponButtonState button_state = {
-                .fire = primary_pressed && is_aiming
-            };
-
-            if (primary_pressed && is_aiming) {
-                equipped_weapon->primary_attack(slot_i, button_state, this);
-            }
-            equipped_weapon->post_update(slot_i, this, button_state);
-        }
-    }
 }
 
 void PlayerCharacter::_ui_process(float p_delta) {
@@ -283,14 +270,16 @@ void PlayerCharacter::_ui_process(float p_delta) {
     }
 }
 
-BitField<BaseCharacter::InputState> PlayerCharacter::get_action_state(const StringName p_state) const {
-    BitField<BaseCharacter::InputState> state = 0;
+BitField<BaseCharacter::InputActionState> PlayerCharacter::_get_action_state(const StringName p_state) const {
+    BitField<BaseCharacter::InputActionState> state = 0;
     Input *input = Input::get_singleton();
-    if (input->is_action_just_pressed(p_state)) {
-        state.set_flag(InputState::JUST_PRESSED);
-        state.set_flag(InputState::PRESSED);
+    if (input->is_action_just_released(p_state)) {
+        state.set_flag(InputActionState::JUST_RELEASED);
+    } else if (input->is_action_just_pressed(p_state)) {
+        state.set_flag(InputActionState::JUST_PRESSED);
+        state.set_flag(InputActionState::PRESSED);
     } else if (input->is_action_pressed(p_state)) {
-        state.set_flag(InputState::PRESSED);
+        state.set_flag(InputActionState::PRESSED);
     }
 
     return state;
@@ -353,6 +342,10 @@ Vector<StringName> PlayerCharacter::get_available_weapon_items(WeaponSlot p_slot
     }
 
     return weapon_items;
+}
+
+Vector2 PlayerCharacter::get_movement_vector() const {
+    return input_state.movement_input;
 }
 
 CharacterAnimationBase *PlayerCharacter::create_animation() const {

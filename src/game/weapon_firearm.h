@@ -22,6 +22,6 @@ public:
     // In rounds per second please!
     virtual float get_fire_rate() const = 0;
     virtual float get_max_distance() const override;
-    virtual FireMode get_fire_mode() { return FireMode::SEMI_AUTO; }
+    virtual FireMode get_fire_mode() const { return FireMode::SEMI_AUTO; }
     virtual bool uses_occluded_crosshair() const override;
 };

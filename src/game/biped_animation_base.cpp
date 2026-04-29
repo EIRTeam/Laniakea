@@ -185,14 +185,6 @@ void BipedAnimationBase::physics_update(BaseCharacter *p_character, float p_delt
         const float angle = Math::rad_to_deg(movement_direction.signed_angle_to(model->get_target_facing_direction(), Vector3(0.0f, 1.0f, 0.0f)));
         set_locomotion_angle(angle);
     }
-
-    Vector3 normalized_vel = effective_vel;
-    normalized_vel.y = 0.0f;
-    normalized_vel.normalize();
-    
-    if (normalized_vel.is_normalized()) {
-        model->set_target_facing_direction(normalized_vel);
-    }
 }
 
 BipedAnimationBase::UpperBodyAnimationState BipedAnimationBase::get_current_upper_body_animation_state() const {

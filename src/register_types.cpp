@@ -31,6 +31,7 @@
 #include "game/ui/radial_container.h"
 #include "game/ui/item_selector_ui.h"
 #include "game/ui/item_select_icon.h"
+#include "game/weapon_counter_shield.h"
 #include "game/weapon_gravitygun.h"
 #include "game/weapon_instance.h"
 #include "game/weapon_firearm.h"
@@ -91,6 +92,7 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level)
 	GDREGISTER_CLASS(HipRotatorModifier3D);
 	GDREGISTER_CLASS(WeaponModel);
 	GDREGISTER_CLASS(WeaponGravityGun);
+	GDREGISTER_CLASS(WeaponCounterShield);
 	GDREGISTER_CLASS(LaniakeaPhysicsProp);
 	GDREGISTER_CLASS(RadialContainer);
 	GDREGISTER_CLASS(ItemSelectorUI);

@@ -22,8 +22,11 @@ void BaseCharacter::_bind_methods() {
 
 Movement::MovementSpeed BaseCharacter::get_desired_movement_speed() const {
     static StringName move_sprint = "sprint";
+
+    const Vector2 movement_vector = get_movement_vector();
+    const float movement_vector_length = movement_vector.length();
     if (is_action_pressed(InputCommand::SPRINT)) {
-        return input_state.movement_input.length() > 0.0f ? Movement::MovementSpeed::SPRINTING : Movement::MovementSpeed::IDLING;
+        return movement_vector_length > 0.0f ? Movement::MovementSpeed::SPRINTING : Movement::MovementSpeed::IDLING;
     }
 
     if (input_state.movement_input.length() > 0.5f) {
@@ -36,16 +39,16 @@ Movement::MovementSpeed BaseCharacter::get_desired_movement_speed() const {
     return Movement::MovementSpeed::IDLING;
 }
 
-Vector2 BaseCharacter::get_input_vector() const {
-    return input_state.movement_input;
-}
-
-Vector2 BaseCharacter::get_input_vector_transformed() const {
-    return input_state.movement_input;
-}
-
 bool BaseCharacter::is_action_pressed(InputCommand p_command) const {
-    return input_state.button_states[p_command] & InputState::PRESSED;
+    return get_action_state(p_command).has_flag(InputActionState::PRESSED);
+}
+
+bool BaseCharacter::is_action_just_pressed(InputCommand p_command) const {
+    return get_action_state(p_command).has_flag(InputActionState::JUST_PRESSED);
+}
+
+bool BaseCharacter::is_action_just_released(InputCommand p_command) const {
+    return get_action_state(p_command).has_flag(InputActionState::JUST_RELEASED);
 }
 
 void BaseCharacter::get_aim_trajectory(int p_wapon_slot, Vector3 &r_origin, Vector3 &r_direction) {
@@ -102,6 +105,26 @@ void BaseCharacter::_physics_process(double p_delta) {
     movement.set_desired_movement_speed(get_desired_movement_speed());
     movement.set_input_vector(get_input_vector_transformed());
     movement.update(p_delta);
+
+    for (int slot_i = 0; slot_i < WEAPON_SLOT_MAX; slot_i++) {
+        Ref<WeaponInstanceBase> equipped_weapon = equipped_weapons[slot_i];
+        const InputCommand input_command = slot_i == WEAPON_SLOT_PRIMARY ? InputCommand::PRIMARY_FIRE : InputCommand::SECONDARY_FIRE;
+        const bool primary_pressed = is_action_pressed(input_command);
+        if (equipped_weapon.is_valid()) {
+            WeaponInstanceBase::WeaponButtonState button_state = {
+                .fire = primary_pressed
+            };
+
+            if (primary_pressed) {
+                equipped_weapon->primary_attack(slot_i, button_state, this);
+            }
+            equipped_weapon->post_update(slot_i, this, button_state);
+        }
+    }
+
+    if (model) {
+        model->update(p_delta);
+    }
 }
 
 void BaseCharacter::_process(double p_delta) {
@@ -180,6 +203,7 @@ void BaseCharacter::equip_weapon(WeaponSlot p_slot, Ref<WeaponInstanceBase> p_we
             per_slot_weapon_visual[p_slot]->queue_free();
             per_slot_weapon_visual[p_slot] = nullptr;
         }
+        equipped_weapons[p_slot]->unequipped(p_slot, this);
         equipped_weapons[p_slot] = Ref<WeaponInstanceBase>();
     }
 
@@ -188,6 +212,8 @@ void BaseCharacter::equip_weapon(WeaponSlot p_slot, Ref<WeaponInstanceBase> p_we
     if (!p_weapon.is_valid()) {
         return;
     }
+
+    p_weapon->equipped(p_slot, this);
 
     if (model->get_hand_attachment_node() == nullptr) {
         return;

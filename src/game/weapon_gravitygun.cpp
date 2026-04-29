@@ -20,7 +20,7 @@
 CVar WeaponGravityGun::pull_force_cvar = CVar::create_variable("gravity_gun_pull_force", GDEXTENSION_VARIANT_TYPE_FLOAT, 100.0f, "Force to pull objects towards the player when they are not yet grabbable");
 CVar WeaponGravityGun::pull_threshold_cvar = CVar::create_variable("gravity_gun_pull_threshold", GDEXTENSION_VARIANT_TYPE_FLOAT, 15.0f, "Maximum distance to the object to be slowly pulled towards the player.");
 CVar WeaponGravityGun::grab_threshold_cvar = CVar::create_variable("gravity_gun_grab_threshold", GDEXTENSION_VARIANT_TYPE_FLOAT, 5.0f, "Maximum distance to the object to be considered grabbable");
-CVar WeaponGravityGun::grabbed_offset_cvar = CVar::create_variable("gravity_gun_grabbed_offset", GDEXTENSION_VARIANT_TYPE_VECTOR3, Vector3(0.0f, 1.5f, 0.0f), "Offset from the player for grabbed objects");
+CVar WeaponGravityGun::grabbed_offset_cvar = CVar::create_variable("gravity_gun_grabbed_offset", GDEXTENSION_VARIANT_TYPE_VECTOR3, Vector3(0.0f, 2.5f, 0.0f), "Offset from the player for grabbed objects");
 CVar WeaponGravityGun::throw_velocity_cvar = CVar::create_variable("gravity_gun_throw_velocity", GDEXTENSION_VARIANT_TYPE_FLOAT, 30.0f, "Force with which to throw grabbed objects");
 CVar WeaponGravityGun::throw_angular_velocity_max_cvar = CVar::create_variable("gravity_gun_throw_angular_velocity_max", GDEXTENSION_VARIANT_TYPE_FLOAT, (float)Math_PI*3.0f, "Random angular velocity to add to a thrown object");
 
@@ -33,7 +33,7 @@ Vector3 WeaponGravityGun::_random_angular_velocity(float p_min_rads, float p_max
 }
 
 void WeaponGravityGun::primary_attack(int p_weapon_slot, const WeaponButtonState &p_button_state, BaseCharacter *p_character) {
-    const bool just_pressed_attack = p_character->get_input_state().button_states[BaseCharacter::SECONDARY_FIRE] & BaseCharacter::InputState::JUST_PRESSED;
+    const bool just_pressed_attack = p_character->is_action_just_pressed(BaseCharacter::SECONDARY_FIRE);
     if (needs_attack_repress && just_pressed_attack) {
         needs_attack_repress = false;
     }

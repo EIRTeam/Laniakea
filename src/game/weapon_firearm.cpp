@@ -8,7 +8,6 @@ void WeaponFirearmInstance::_bind_methods() {
 }
 
 void WeaponFirearmInstance::get_aim_trajectory(int p_weapon_slot, BaseCharacter *p_character, Vector3 &r_origin, Vector3 &r_direction) const {
-
     return p_character->get_aim_trajectory(p_weapon_slot, r_origin, r_direction);
 }
 
@@ -25,7 +24,7 @@ void WeaponFirearmInstance::post_update(int p_weapon_slot, BaseCharacter *p_char
                 get_aim_trajectory(p_weapon_slot, p_character, origin, normal);
                 p_character->fire_bullet(origin, normal, get_max_distance(), 0, 20.0f);
                 do_view_kick(p_character);
-            }
+            } break;
             case FULL_AUTO: {
                 while (p_button_state.fire && next_possible_primary_attack <= time) {
                     Vector3 origin;
@@ -33,9 +32,9 @@ void WeaponFirearmInstance::post_update(int p_weapon_slot, BaseCharacter *p_char
                     get_aim_trajectory(p_weapon_slot, p_character, origin, normal);
                     p_character->fire_bullet(origin, normal, get_max_distance(), 0, 20.0f);
                     next_possible_primary_attack += get_fire_rate();
-                    UtilityFunctions::prints("FIRE BULLET", next_possible_primary_attack, time);
+                    do_view_kick(p_character);
                 }
-            }
+            } break;
         }
     }
 }

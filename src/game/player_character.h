@@ -26,6 +26,13 @@ class PlayerCharacter : public BaseCharacter {
     TypedArray<RID> occlusion_exceptions;
 
     BipedAnimationBase *player_animation = nullptr;
+
+    struct PlayerCharacterInputState {
+        Vector2 movement_input;
+        std::array<int, INPUT_COMMAND_MAX> button_states;
+    };
+
+    PlayerCharacterInputState input_state;
 public:
     Ref<MovementSettings> movement_settings;
     static CVar player_camera_horizontal_deadzone_radius;
@@ -34,10 +41,9 @@ public:
     MAKE_SETTER_GETTER_VALUE(Node3D *, camera_offset_target, camera_offset_target);
     MAKE_SETTER_GETTER_VALUE(PlayerUI *, player_ui, player_ui);
     static void _bind_methods();
-    virtual Vector2 get_input_vector_transformed() const override;
     void _movement_physics_process(float p_delta);
     virtual void _ui_process(float p_delta);
-    BitField<InputState> get_action_state(const StringName p_state) const;
+    BitField<InputActionState> _get_action_state(const StringName p_state) const;
     virtual void _camera_process(float p_delta);
     virtual void _ready() override;
     virtual void _process(double p_delta) override;
@@ -54,6 +60,10 @@ public:
 
     Vector<StringName> get_available_weapon_items(WeaponSlot p_slot) const;
     virtual CharacterAnimationBase *create_animation() const override;
+
+    virtual Vector2 get_movement_vector() const override;
+    virtual Vector2 get_movement_vector_transformed() const override;
+    virtual BitField<InputActionState> get_action_state(InputCommand p_command) const override;
 
     PlayerCharacter();
 };
