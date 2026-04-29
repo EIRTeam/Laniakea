@@ -1,9 +1,11 @@
 #pragma once
 
-#include "game/base_movement.h"
-#include "game/biped_animation_base.h"
-#include "game/character_animation_base.h"
-#include "game/character_model.h"
+#include "base_movement.h"
+#include "biped_animation_base.h"
+#include "character_animation_base.h"
+#include "character_model.h"
+#include "character_settings.h"
+#include "damageable.h"
 #include "godot_cpp/core/binder_common.hpp"
 #include "godot_cpp/core/error_macros.hpp"
 
@@ -30,9 +32,10 @@ protected:
     Ref<CharacterSettings> character_settings;
     CharacterModel *model = nullptr;
     static void _bind_methods();
+    TypedArray<RID> attack_collision_exceptions;
 public:
     MAKE_SETTER_GETTER_VALUE(CharacterModel *, model, model);
-    enum InputState {
+    enum InputActionState {
         PRESSED = 1,
         JUST_PRESSED = 2,
         JUST_RELEASED = 4
@@ -66,6 +69,8 @@ public:
     virtual void _physics_process(double p_delta) override;
     virtual void _process(double p_delta) override;
     virtual void _ready() override;
+    void add_attack_collision_exception(RID p_rid);
+    void remove_attack_collision_exception(RID p_rid);
     virtual Ref<MovementSettings> get_movement_settings() const;
     BaseCharacter();
     virtual ~BaseCharacter();
@@ -82,6 +87,7 @@ public:
 
     virtual Vector<StringName> get_available_items(WeaponSlot p_slot) const { return Vector<StringName>(); }
     virtual CharacterAnimationBase *create_animation() const = 0;
+    RID get_hitbox_detector_body_rid() const;
 
     BaseMovement *get_movement() { return &movement; };
 };

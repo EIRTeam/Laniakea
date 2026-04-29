@@ -13,7 +13,6 @@ using namespace godot;
 class RexbotBrain {
     RexbotVision vision;
     RexbotLocomotion locomotion;
-
     RexbotNPCBase *actor = nullptr;
 public:
     void update(double p_delta);

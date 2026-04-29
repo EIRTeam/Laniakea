@@ -2,9 +2,12 @@
 
 #include "godot_cpp/core/defs.hpp"
 
-#define MAKE_BIND_T(m_class, m_name, m_type, m_property_hint, m_hint_string) \
+#define BIND_SETTER_GETTER(m_class, m_name) \
     ClassDB::bind_method(D_METHOD("set_" _STR(m_name), _STR(m_name)), &m_class::set_##m_name); \
     ClassDB::bind_method(D_METHOD("get_" _STR(m_name)), &m_class::get_##m_name); \
+
+#define MAKE_BIND_T(m_class, m_name, m_type, m_property_hint, m_hint_string) \
+    BIND_SETTER_GETTER(m_class, m_name) \
     ADD_PROPERTY(PropertyInfo(m_type, _STR(m_name), m_property_hint, m_hint_string), "set_" _STR(m_name), "get_" _STR(m_name));
 
 #define MAKE_BIND_STRING_NAME(m_class, m_name) MAKE_BIND_T(m_class, m_name, Variant::STRING_NAME, PROPERTY_HINT_NONE, "");

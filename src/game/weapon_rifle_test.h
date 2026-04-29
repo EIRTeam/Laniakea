@@ -5,6 +5,9 @@
 class WeaponRifleTest : public WeaponFirearmInstance {
     GDCLASS(WeaponRifleTest, WeaponFirearmInstance);
     static void _bind_methods() {}
+    virtual FireMode get_fire_mode() const override {
+        return FireMode::FULL_AUTO;
+    }
     virtual float get_fire_rate() const override {
         return 0.075f;
     }

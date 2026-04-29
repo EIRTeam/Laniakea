@@ -2,6 +2,8 @@
 #include "debug/debug_overlay.h"
 #include "game/biped_animation_base.h"
 #include "game/bullet_trail.h"
+#include "game/character_hitbox_detector.h"
+#include "game/damageable.h"
 #include "game/main_loop.h"
 #include "game/movement_settings.h"
 #include "game/weapon_model.h"
@@ -13,6 +15,7 @@
 #include "godot_cpp/classes/scene_tree.hpp"
 #include "godot_cpp/classes/window.hpp"
 #include "godot_cpp/classes/world3d.hpp"
+#include "godot_cpp/core/print_string.hpp"
 #include "physics_layers.h"
 #include "game/weapon_instance.h"
 
@@ -29,10 +32,10 @@ Movement::MovementSpeed BaseCharacter::get_desired_movement_speed() const {
         return movement_vector_length > 0.0f ? Movement::MovementSpeed::SPRINTING : Movement::MovementSpeed::IDLING;
     }
 
-    if (input_state.movement_input.length() > 0.5f) {
+    if (movement_vector_length > 0.5f) {
         return Movement::MovementSpeed::RUNNING;
     }
-    if (input_state.movement_input.length() > 0.0f) {
+    if (movement_vector_length > 0.0f) {
         return Movement::MovementSpeed::WALKING;
     }
 
@@ -56,13 +59,14 @@ void BaseCharacter::get_aim_trajectory(int p_wapon_slot, Vector3 &r_origin, Vect
     r_direction = Vector3();
 }
 
-void BaseCharacter::fire_bullet(const Vector3 &p_origin, const Vector3 &p_direction, float p_distance, int p_ammo_type, float p_damage) {
-    DebugOverlay::line(p_origin, p_origin + p_direction * p_distance, Color(1.0, 0.0, 0.0), false, 5.0f);
+void BaseCharacter::fire_bullet(const Vector3 &p_origin, const Vector3 &p_direction, float p_distance, int p_ammo_type, float p_damage, bool p_fire_visual_from_origin) {
+    //DebugOverlay::line(p_origin, p_origin + p_direction * p_distance, Color(1.0, 0.0, 0.0), false, 5.0f);
     Ref<PhysicsRayQueryParameters3D> params;
     params.instantiate();
     params->set_from(p_origin);
     params->set_to(p_origin + p_direction * p_distance);
-    params->set_collision_mask(PhysicsLayers::LAYER_WORLDSPAWN);
+    params->set_collision_mask(PhysicsLayers::LAYER_WORLDSPAWN | PhysicsLayers::LAYER_ENTITY_HITBOXES);
+    params->set_exclude(attack_collision_exceptions);
 
     PhysicsDirectSpaceState3D *dss = get_world_3d()->get_direct_space_state();
     Dictionary result = dss->intersect_ray(params);
@@ -71,6 +75,15 @@ void BaseCharacter::fire_bullet(const Vector3 &p_origin, const Vector3 &p_direct
 
     DebugOverlay::sphere(firing_end, 0.25f, Color(1.0f, 0.0f, 0.0f));
 
+    if (!result.is_empty()) {
+        Node *n = Object::cast_to<Node>(result["collider"]);
+        if (n != nullptr) {
+            DebugOverlay::text(result["position"], vformat("%s", n->get_name()), Color(0.0, 1.0, 0.0), true, 2.0f);
+        }
+    } else {
+        print_line("Hit... nothing");
+    }
+
     // Add trail
 
     BulletTrail *trail = memnew(BulletTrail);
@@ -78,19 +91,19 @@ void BaseCharacter::fire_bullet(const Vector3 &p_origin, const Vector3 &p_direct
 
     Vector3 trail_origin = p_origin;
 
-    if (per_slot_weapon_visual[WEAPON_SLOT_PRIMARY] != nullptr && per_slot_weapon_visual[WEAPON_SLOT_PRIMARY]->get_muzzle_location()) {
+    if (!p_fire_visual_from_origin && per_slot_weapon_visual[WEAPON_SLOT_PRIMARY] != nullptr && per_slot_weapon_visual[WEAPON_SLOT_PRIMARY]->get_muzzle_location()) {
         trail_origin = per_slot_weapon_visual[WEAPON_SLOT_PRIMARY]->get_muzzle_location()->get_global_position();
     }
 
     trail->initialize(trail_origin, firing_end, 100.0f);
-}
 
-void BaseCharacter::set_input_state(const CharacterInputState &p_input_state) {
-    input_state = p_input_state;
-}
+    if (result.is_empty()) {
+        return;
+    }
 
-BaseCharacter::CharacterInputState BaseCharacter::get_input_state() const {
-    return input_state;
+    if (IDamageable *as_damageable = dynamic_cast<IDamageable*>(result["collider"].get_validated_object()); as_damageable != nullptr) {
+        as_damageable->on_bullet_damage_received(p_ammo_type, p_damage, result["position"], result["normal"], result["shape"]);
+    }
 }
 
 void BaseCharacter::_physics_process(double p_delta) {
@@ -103,7 +116,7 @@ void BaseCharacter::_physics_process(double p_delta) {
     }
     
     movement.set_desired_movement_speed(get_desired_movement_speed());
-    movement.set_input_vector(get_input_vector_transformed());
+    movement.set_input_vector(get_movement_vector_transformed());
     movement.update(p_delta);
 
     for (int slot_i = 0; slot_i < WEAPON_SLOT_MAX; slot_i++) {
@@ -145,7 +158,21 @@ void BaseCharacter::_ready() {
     if (animation != nullptr) {
         animation->initialize(movement_settings, model);
     }
+
+    add_attack_collision_exception(get_hitbox_detector_body_rid());
+
     add_to_group("characters");
+}
+
+void BaseCharacter::add_attack_collision_exception(RID p_rid) {
+    if (!p_rid.is_valid()) {
+        return;
+    }
+    attack_collision_exceptions.push_back(p_rid);
+}
+
+void BaseCharacter::remove_attack_collision_exception(RID p_rid) {
+    attack_collision_exceptions.erase(p_rid);
 }
 
 Ref<MovementSettings> BaseCharacter::get_movement_settings() const {
@@ -185,6 +212,15 @@ void BaseCharacter::add_collision_exception(RID p_body) {
 
 void BaseCharacter::remove_collision_exception(RID p_body) {
     movement.remove_collision_exception(p_body);
+}
+
+RID BaseCharacter::get_hitbox_detector_body_rid() const {
+    CharacterHitboxDetector *hitbox_detector = get_model()->get_hitbox_detector();
+    if (hitbox_detector) {
+        return hitbox_detector->get_rid();
+    }
+
+    return RID();
 }
 
 BaseCharacter::BaseCharacter() {

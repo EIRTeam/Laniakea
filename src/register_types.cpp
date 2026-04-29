@@ -18,6 +18,8 @@
 #include "game/base_character.h"
 #include "game/biped_animation_base.h"
 #include "game/bullet_trail.h"
+#include "game/character_hitbox.h"
+#include "game/character_hitbox_detector.h"
 #include "game/character_model.h"
 #include "game/game_rules_laniakea.h"
 #include "game/main_loop.h"
@@ -97,6 +99,9 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level)
 	GDREGISTER_CLASS(RadialContainer);
 	GDREGISTER_CLASS(ItemSelectorUI);
 	GDREGISTER_CLASS(ItemSelectIcon);
+
+	GDREGISTER_CLASS(CharacterHitbox);
+	GDREGISTER_CLASS(CharacterHitboxDetector);
 	
 	GDREGISTER_CLASS(InertializationSkeletonModifierPolynomial);
 	GDREGISTER_CLASS(RexbotConfiguration);

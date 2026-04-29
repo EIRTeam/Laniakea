@@ -1,5 +1,7 @@
 #pragma once
 
+#include "console/console_system.h"
+#include "console/cvar.h"
 #include "game/rexbot/rexbot_action.h"
 #include "game/rexbot/rexbot_action_result.h"
 #include "godot_cpp/variant/string.hpp"

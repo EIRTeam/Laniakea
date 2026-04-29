@@ -2,7 +2,7 @@
 #include "rexbot_configuration.h"
 
 void RexbotBrain::update(double p_delta) {
-    vision.update();
+    vision.update(p_delta);
 }
 
 RexbotVision *RexbotBrain::get_vision() const {

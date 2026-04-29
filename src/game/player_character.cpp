@@ -96,13 +96,14 @@ void PlayerCharacter::_ready() {
     player_animation = Object::cast_to<BipedAnimationBase>(animation);
 
     player_animation->set_weapon_animation_type(BipedAnimationBase::WEAPON_ANIMATION_TYPE_RIFLE);
+
+    add_aim_occlusion_exception(get_hitbox_detector_body_rid());
 }
 
 void PlayerCharacter::_process(double p_delta) {
     if (Engine::get_singleton()->is_editor_hint()) {
         return;
     }
-
 
     const bool is_aiming = is_action_pressed(InputCommand::AIM);
 
@@ -186,7 +187,7 @@ void PlayerCharacter::_movement_physics_process(float p_delta) {
         ray_query.instantiate();
         ray_query->set_from(camera_aim_origin);
         ray_query->set_to(camera_aim_origin + camera_aim_normal * 1000.0f);
-        ray_query->set_collision_mask(PhysicsLayers::LAYER_WORLDSPAWN | PhysicsLayers::LAYER_PROPS);
+        ray_query->set_collision_mask(PhysicsLayers::LAYER_WORLDSPAWN | PhysicsLayers::LAYER_PROPS | PhysicsLayers::LAYER_ENTITY_HITBOXES);
         ray_query->set_exclude(occlusion_exceptions);
 
         PhysicsDirectSpaceState3D *dss = get_world_3d()->get_direct_space_state();
@@ -244,8 +245,15 @@ void PlayerCharacter::_movement_physics_process(float p_delta) {
             if (target_facing_dir.is_normalized()) {
                 model->set_target_facing_direction(target_facing_dir);
             }
+        } else {
+            Vector3 normalized_vel = movement.get_effective_velocity();
+            normalized_vel.y = 0.0f;
+            normalized_vel.normalize();
+            
+            if (normalized_vel.is_normalized()) {
+                model->set_target_facing_direction(normalized_vel);
+            }
         }
-        model->update(p_delta);
     }
 
     DebugOverlay::horz_arrow(get_global_position(), model->get_target_facing_direction() * 1.0f + get_global_position(), 0.25f, Color::named("Green"));
@@ -330,6 +338,15 @@ void PlayerCharacter::add_aim_occlusion_exception(RID p_exception) {
 
 void PlayerCharacter::remove_occlusion_exception(RID p_exception) {
     occlusion_exceptions.erase(p_exception);
+}
+
+bool PlayerCharacter::get_occlusion_target_position(WeaponSlot p_slot, Vector3 &r_target_pos) const {
+    r_target_pos = per_slot_aim_occlusion_info[p_slot].target_position_interp_node->get_global_position();
+    return per_slot_aim_occlusion_info[p_slot].is_target_position_occluded;
+}
+
+Vector3 PlayerCharacter::get_look_direction() const {
+    return get_model()->get_eye_position().direction_to(per_slot_aim_occlusion_info[WEAPON_SLOT_PRIMARY].target_position_interp_node->get_global_position());
 }
 
 Vector<StringName> PlayerCharacter::get_available_weapon_items(WeaponSlot p_slot) const {

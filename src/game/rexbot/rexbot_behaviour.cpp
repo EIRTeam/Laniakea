@@ -1,11 +1,18 @@
 #include "rexbot_behaviour.h"
+#include "game/rexbot/rexbot_npc_base.h"
+#include "gdextension_interface.h"
 #include "godot_cpp/core/memory.hpp"
+#include "godot_cpp/core/print_string.hpp"
 #include "godot_cpp/variant/packed_string_array.hpp"
+#include "godot_cpp/variant/variant.hpp"
 #include "rexbot_action.h"
 
 void RexbotBehaviour::apply_action_result(const RexbotActionResult &p_result) {
     switch (p_result.result_type) {
 		case RexbotActionResult::DONE: {
+            if (RexbotNPCBase::rexbot_debug_behaviour_cvar.get_bool()) {
+                print_line(vformat("REXBOT: Action %s DONE (%s)", current_action->get_name(), p_result.reason));
+            }
             DEV_ASSERT(current_action->action_buried_under_me != nullptr);
             RexbotAction *old_action = current_action;
             current_action = current_action->action_buried_under_me;
@@ -17,12 +24,18 @@ void RexbotBehaviour::apply_action_result(const RexbotActionResult &p_result) {
             // nothing...
         } break;
 		case RexbotActionResult::SUSPEND_FOR: {
+            if (RexbotNPCBase::rexbot_debug_behaviour_cvar.get_bool()) {
+                print_line(vformat("REXBOT: Action %s SUSPENDED FOR -> %s (%s)", current_action->get_name(), p_result.action->get_name(), p_result.reason));
+            }
             current_action->on_suspend();
             current_action->action_covering_me = p_result.action;
             p_result.action->action_buried_under_me = current_action;
             current_action = p_result.action;
         } break;
 		case RexbotActionResult::CHANGE_TO: {
+            if (RexbotNPCBase::rexbot_debug_behaviour_cvar.get_bool()) {
+                print_line(vformat("REXBOT: Action %s CHANGED TO -> %s (%s)", current_action->get_name(), p_result.action->get_name(), p_result.reason));
+            }
             current_action->on_end();
             p_result.action->action_buried_under_me = current_action->action_buried_under_me;
             memdelete(current_action);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "bind_macros.h"
+#include "game/character_hitbox_detector.h"
 #include "godot_cpp/classes/aim_modifier3d.hpp"
 #include "godot_cpp/classes/animation_tree.hpp"
 #include "godot_cpp/classes/node3d.hpp"
@@ -20,6 +21,8 @@ class CharacterModel : public Node3D {
     Node3D *milk_hip_target = nullptr;
     HipRotatorModifier3D *hip_rotator = nullptr;
     Node3D *hand_attachment_node = nullptr;
+    Node3D *eye_position_node = nullptr;
+    CharacterHitboxDetector *hitbox_detector = nullptr;
 
     Springs::QuaternionSpringCritical facing_spring;
     Quaternion target_facing_direction;
@@ -30,9 +33,12 @@ public:
     MAKE_SETTER_GETTER_VALUE(Node3D*, milk_hip_target, milk_hip_target);
     MAKE_SETTER_GETTER_VALUE(Node3D *, firing_position_node, firing_position_node);
     MAKE_SETTER_GETTER_VALUE(Node3D *, hand_attachment_node, hand_attachment_node);
+    MAKE_SETTER_GETTER_VALUE(Node3D *, eye_position_node, eye_position_node);
     MAKE_SETTER_GETTER_VALUE(HipRotatorModifier3D *, hip_rotator, hip_rotator);
+    MAKE_SETTER_GETTER_VALUE(CharacterHitboxDetector *, hitbox_detector, hitbox_detector);
     static void _bind_methods();
     void update(float p_delta);
     void set_target_facing_direction(Vector3 p_facing_direction);
     Vector3 get_target_facing_direction() const;
+    Vector3 get_eye_position() const;
 };

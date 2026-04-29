@@ -1,6 +1,7 @@
 #include "character_model.h"
 #include "godot_cpp/classes/global_constants.hpp"
 #include "godot_cpp/core/class_db.hpp"
+#include "godot_cpp/core/error_macros.hpp"
 #include "godot_cpp/core/property_info.hpp"
 #include "godot_cpp/variant/quaternion.hpp"
 #include "animation/hip_rotator_modifier.h"
@@ -13,6 +14,8 @@ void CharacterModel::_bind_methods() {
     MAKE_BIND_NODE(CharacterModel, firing_position_node, Node3D);
     MAKE_BIND_NODE(CharacterModel, hand_attachment_node, Node3D);
     MAKE_BIND_NODE(CharacterModel, hip_rotator, HipRotatorModifier3D);
+    MAKE_BIND_NODE(CharacterModel, eye_position_node, Node3D);
+    MAKE_BIND_NODE(CharacterModel, hitbox_detector, CharacterHitboxDetector);
 }
 
 void CharacterModel::update(float p_delta) {
@@ -31,4 +34,9 @@ void CharacterModel::set_target_facing_direction(Vector3 p_facing_direction) {
 
 Vector3 CharacterModel::get_target_facing_direction() const {
     return target_facing_direction.xform(Vector3(0.0, 0.0, -1.0f));
+}
+
+Vector3 CharacterModel::get_eye_position() const {
+    ERR_FAIL_NULL_V_MSG(eye_position_node, get_global_position(), "Tried to get eye position, but model doesn't have an eye position node");
+    return eye_position_node->get_global_position();
 }

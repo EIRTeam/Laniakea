@@ -57,6 +57,8 @@ public:
     Transform3D get_milk_attachment_transform() const;
     void add_aim_occlusion_exception(RID p_exception);
     void remove_occlusion_exception(RID p_exception);
+    bool get_occlusion_target_position(WeaponSlot p_slot, Vector3 &r_target_pos) const;
+    virtual Vector3 get_look_direction() const override;
 
     Vector<StringName> get_available_weapon_items(WeaponSlot p_slot) const;
     virtual CharacterAnimationBase *create_animation() const override;
