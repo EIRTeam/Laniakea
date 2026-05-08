@@ -10,7 +10,9 @@ ConsoleSystem *ConsoleSystem::singleton = nullptr;
 CVar ConsoleSystem::save_changed_vars = CVar::create_variable("save_changed_vars", GDEXTENSION_VARIANT_TYPE_BOOL, true, "Should changed variables be saved?", PROPERTY_HINT_NONE, "");
 CVar ConsoleSystem::print_changed_command = CVar::create_command("print_changed", "Prints CVars that are different from their defaults");
 const char *CVAR_CONFIG_FILE_PATH = "user://cvars.cfg";
+const char *CVAR_HISTORY_CONFIG_FILE = "user://history.cfg";
 const char *CVAR_SECTION_NAME = "cvars";
+constexpr int MAX_HISTORY_ENTRY_COUNT = 50;
 
 void ConsoleSystem::register_cvar(CVar* p_cvar) {
     auto it = registered_cvars.find(p_cvar->cvar_data->cvar_name);
@@ -47,6 +49,12 @@ void ConsoleSystem::initialize() {
         cvar_config_file->load("user://cvars.cfg");
     }
 
+    history_config_file.instantiate();
+    if (FileAccess::file_exists(CVAR_HISTORY_CONFIG_FILE)) {
+        history_config_file->load(CVAR_HISTORY_CONFIG_FILE);
+        history_entries = history_config_file->get_value("history", "entries");
+    }
+
     std::vector<CVar::DelayedInitData> delayed_init_arr = CVar::get_delayed_init_arr();
     for (int i = 0; i < delayed_init_arr.size(); i++) {
         delayed_init_arr[i].cvar->_delayed_init(delayed_init_arr[i]);
@@ -72,6 +80,26 @@ bool ConsoleSystem::set_cvar(const StringName &p_cvar, const Variant &p_value, b
     it->value->notify_cvar_changed();
 
     return true;
+}
+
+void ConsoleSystem::push_history(const String &p_command) {
+    while (history_entries.size() >= MAX_HISTORY_ENTRY_COUNT) {
+        history_entries.remove_at(0);
+    }
+
+    history_entries.push_back(p_command);
+
+    history_config_file->set_value("history", "entries", history_entries);
+    history_config_file->save(CVAR_HISTORY_CONFIG_FILE);
+}
+
+String ConsoleSystem::recall_history(int p_idx) {
+    ERR_FAIL_INDEX_V(p_idx, history_entries.size(), "");
+    return history_entries[history_entries.size() - 1 - p_idx];
+}
+
+int ConsoleSystem::get_history_entry_count() const {
+    return history_entries.size();
 }
 
 Vector<ConsoleSystem::CVarAutocompleteResult> ConsoleSystem::do_autocomplete(const String &p_text) const {

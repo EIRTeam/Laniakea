@@ -27,6 +27,8 @@ class ConsoleGUI : public Control {
     LineEdit *line_edit = nullptr;
 
     ItemList *autocomplete_item_list = nullptr;
+    bool prev_pause_state = false;
+    int current_history_index = 0;
     void _show_autocomplete(const String &p_text);
     void _autocomplete_accept();
     void _on_log_bbcode(const String &p_text);
@@ -34,9 +36,12 @@ class ConsoleGUI : public Control {
     Ref<ConsoleLogger> logger;
     Input::MouseMode prev_mouse_mode = Input::MOUSE_MODE_VISIBLE;
     String _get_command_preview(CVar *p_cvar) const;
+    void recall_history(int p_step);
+
 public:
 	virtual void _shortcut_input(const Ref<InputEvent> &p_event) override;
 	virtual void _input(const Ref<InputEvent> &p_event) override;
+
     ConsoleGUI();
     ~ConsoleGUI();
 };

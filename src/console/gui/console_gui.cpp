@@ -2,12 +2,14 @@
 #include "console/console_system.h"
 #include "console/cvar.h"
 #include "godot_cpp/classes/control.hpp"
+#include "godot_cpp/classes/node.hpp"
 #include "godot_cpp/classes/os.hpp"
 #include "godot_cpp/classes/global_constants.hpp"
 #include "godot_cpp/classes/item_list.hpp"
 #include "godot_cpp/classes/line_edit.hpp"
 #include "godot_cpp/classes/panel_container.hpp"
 #include "godot_cpp/classes/rich_text_label.hpp"
+#include "godot_cpp/classes/scene_tree.hpp"
 #include "godot_cpp/classes/v_box_container.hpp"
 #include "godot_cpp/classes/rich_text_label.hpp"
 #include "godot_cpp/classes/input.hpp"
@@ -26,6 +28,18 @@ void ConsoleGUI::_shortcut_input(const Ref<InputEvent> &p_event) {
 }
 
 void ConsoleGUI::_input(const Ref<InputEvent> &p_event) {
+    if (line_edit->has_focus() && !autocomplete_item_list->is_visible()) {
+        if (p_event->is_action_pressed("ui_up")) {
+            recall_history(1);
+            accept_event();
+        }
+
+        if (p_event->is_action_pressed("ui_down")) {
+            recall_history(-1);
+            accept_event();
+        }
+    }
+
     if (!autocomplete_item_list->is_visible()) {
         return;
     }
@@ -83,6 +97,7 @@ void ConsoleGUI::_notification(int p_what) {
 void ConsoleGUI::hide_console() {
     hide();
     Input::get_singleton()->set_mouse_mode(prev_mouse_mode);
+    get_tree()->set_pause(prev_pause_state);
 }
 
 void ConsoleGUI::show_console() {
@@ -91,6 +106,8 @@ void ConsoleGUI::show_console() {
 
     prev_mouse_mode = Input::get_singleton()->get_mouse_mode();
     Input::get_singleton()->set_mouse_mode(Input::MOUSE_MODE_VISIBLE);
+    prev_pause_state = get_tree()->is_paused();
+    get_tree()->set_pause(true);
 }
 
 void ConsoleGUI::_bind_methods() {
@@ -154,6 +171,8 @@ void ConsoleGUI::_on_log_bbcode(const String &p_text) {
 void ConsoleGUI::_on_command_submitted(const String &p_command) {
     ConsoleSystem::get_singleton()->execute_user_command(line_edit->get_text());
     line_edit->clear();
+    current_history_index = -1;
+    ConsoleSystem::get_singleton()->push_history(p_command);
 }
 
 String ConsoleGUI::_get_command_preview(CVar *p_cvar) const {
@@ -174,6 +193,22 @@ String ConsoleGUI::_get_command_preview(CVar *p_cvar) const {
     }
 
     return String(" ").join(preview_string_parts);
+}
+
+void ConsoleGUI::recall_history(int p_step) {
+    const int prev_index = current_history_index;
+    const int entry_count = ConsoleSystem::get_singleton()->get_history_entry_count();
+    current_history_index += p_step;
+    current_history_index = CLAMP(p_step, -1, entry_count-1);
+
+    String history_line;
+
+    if (current_history_index >= 0) {
+        history_line = ConsoleSystem::get_singleton()->recall_history(current_history_index);
+    }
+
+    line_edit->set_text(history_line);
+    line_edit->set_caret_column(line_edit->get_text().length());
 }
 
 ConsoleGUI::ConsoleGUI() {
@@ -214,7 +249,9 @@ ConsoleGUI::ConsoleGUI() {
 
     logger->connect("log_bbcode", callable_mp(this, &ConsoleGUI::_on_log_bbcode));
 
-    hide_console();
+    set_process_mode(PROCESS_MODE_ALWAYS);
+
+    hide();
 }
 
 ConsoleGUI::~ConsoleGUI() {
