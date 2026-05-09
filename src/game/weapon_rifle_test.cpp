@@ -4,6 +4,7 @@
 #include "godot_cpp/classes/packed_scene.hpp"
 #include "godot_cpp/classes/resource_loader.hpp"
 #include "weapon_model.h"
+#include "game/game_rules_laniakea.h"
 
 WeaponModel *WeaponRifleTest::instantiate_visuals() const {
     Ref<PackedScene> visuals = ResourceLoader::get_singleton()->load("res://models/weapons/w_rifle.tscn");
@@ -16,3 +17,6 @@ StringName WeaponRifleTest::get_item_name() const {
     return s;
 }
 
+int WeaponRifleTest::get_ammo_type() const {
+    return LaniakeaGameRules::RIFLE_AMMO_TYPE;
+}

@@ -5,7 +5,10 @@
 class LaniakeaGameRules : public GameRules {
     GDCLASS(LaniakeaGameRules, GameRules);
 public:
-    static constexpr int RIFLE_AMMO_TYPE = 0; 
+    enum AmmoTypes {
+        RIFLE_AMMO_TYPE,
+        AMMO_TYPE_MAX 
+    };
 private:
     // Rifle ammo
     static CVar rifle_max_ammo_cvar;

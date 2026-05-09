@@ -10,6 +10,7 @@
 #include "animation/hip_rotator_modifier.h"
 #include "base_movement.h"
 #include "base_character.h"
+#include "godot_cpp/variant/string_name.hpp"
 
 
 
@@ -30,10 +31,13 @@ StringName BipedAnimationBase::get_animation_state_string_name(const AnimationSt
 String BipedAnimationBase::get_upper_body_animation_state_string(const UpperBodyAnimationState p_state) const {
     switch (p_state) {
 		case RIFLE_IDLE: {
-            return "RifleIdle";
+            return "WeaponIdle";
         } break;
 		case RIFLE_AIM: {
-            return "RifleAim";
+            return "WeaponAim";
+        } break;
+		case UPPER_BODY_STATE_RELOAD: {
+            return "WeaponReload";
         } break;
 	}
 }
@@ -188,8 +192,9 @@ void BipedAnimationBase::physics_update(BaseCharacter *p_character, float p_delt
 }
 
 BipedAnimationBase::UpperBodyAnimationState BipedAnimationBase::get_current_upper_body_animation_state() const {
-    const static StringName rifle_aim_state = StringName("RifleAim");
-    const static StringName rifle_idle_state = StringName("RifleIdle");
+    const static StringName rifle_aim_state = StringName("WeaponAim");
+    const static StringName rifle_idle_state = StringName("WeaponIdle");
+    const static StringName weapon_reload_state = StringName("WeaponReload");
 
     const StringName curr_state = model->get_animation_tree()->get("parameters/Locomotion/UpperBodyAnimationState/current_state");
 
@@ -197,9 +202,11 @@ BipedAnimationBase::UpperBodyAnimationState BipedAnimationBase::get_current_uppe
         return UpperBodyAnimationState::RIFLE_AIM;
     } else if (curr_state == rifle_idle_state) {
         return UpperBodyAnimationState::RIFLE_IDLE;
+    } else if (curr_state == weapon_reload_state) {
+        return UpperBodyAnimationState::UPPER_BODY_STATE_RELOAD;
     }
 
-    ERR_FAIL_V_MSG(RIFLE_IDLE, "Unknown state!?");
+    ERR_FAIL_V_MSG(RIFLE_IDLE, vformat("Unknown upper body state %s!?", curr_state));
 }
 
 void BipedAnimationBase::set_upper_body_animation_state(const UpperBodyAnimationState p_state) const {
@@ -232,14 +239,30 @@ void BipedAnimationBase::set_desired_animation_state(const AnimationState &p_ani
     desired_animation_state = p_animation_state;
 }
 
-BipedAnimationBase::WeaponAnimationType BipedAnimationBase::get_weapon_animation_type() const
+BipedAnimationBase::WeaponAnimationSetType BipedAnimationBase::get_weapon_animation_set() const
 {
-    return weapon_animation_type;
+    return weapon_animation_set;
 }
 
-void BipedAnimationBase::set_weapon_animation_type(const WeaponAnimationType &p_weapon_animation_type) {
-    const bool changed = p_weapon_animation_type != weapon_animation_type;
-    weapon_animation_type = p_weapon_animation_type;
+void BipedAnimationBase::set_weapon_animation_set(const WeaponAnimationSetType &p_weapon_animation_type) {
+    const bool changed = p_weapon_animation_type != weapon_animation_set;
+    weapon_animation_set = p_weapon_animation_type;
+
+    print_line(p_weapon_animation_type);
+    // Load weapon animation set
+    model->get_animation_tree()->set(
+        "parameters/Locomotion/WeaponIdle/animation",
+        model->get_animation_settings()->get_animation(p_weapon_animation_type, UpperBodyAnimationState::RIFLE_IDLE)
+    );
+    model->get_animation_tree()->set(
+        "parameters/Locomotion/WeaponAim/animation",
+        model->get_animation_settings()->get_animation(p_weapon_animation_type, UpperBodyAnimationState::RIFLE_AIM)
+    );
+    model->get_animation_tree()->set(
+        "parameters/Locomotion/WeaponReload/animation",
+        model->get_animation_settings()->get_animation(p_weapon_animation_type, UpperBodyAnimationState::UPPER_BODY_STATE_RELOAD)
+    );
+
     needs_inertialization = needs_inertialization || changed;
 }
 
@@ -251,6 +274,28 @@ float BipedAnimationBase::get_aim_x_angle() const
 void BipedAnimationBase::set_aim_x_angle(float aim_x_angle_)
 {
     aim_x_angle = aim_x_angle_;
+}
+
+void BipedAnimationBase::trigger_upper_body_sequence(UpperBodySequence p_sequence) {
+    switch (p_sequence) {
+		case SEQUENCE_RELOAD: {
+            current_upper_body_sequence = CurrentUpperBodySequence {
+                .node_path = "parameters/Locomotion/WeaponReload",
+                .upper_body_state = UPPER_BODY_STATE_RELOAD
+            };
+        } break;
+	}
+}
+
+double BipedAnimationBase::get_upper_body_sequence_duration(UpperBodySequence p_sequence) const {
+    switch (p_sequence) {
+		case SEQUENCE_RELOAD: {
+            StringName animation_name = model->get_animation_settings()->get_animation(weapon_animation_set, UpperBodyAnimationState::UPPER_BODY_STATE_RELOAD);
+            Ref<Animation> anim = model->get_animation_tree()->get_animation(animation_name);
+            ERR_FAIL_COND_V(anim.is_null(), 0.0);
+            return anim->get_length();
+        } break;
+	}
 }
 
 void BipedAnimationBase::set_hanging(bool p_hanging) {
@@ -267,7 +312,7 @@ void BipedAnimationBase::_update_upper_body_state() {
     float blend = 1.0f;
     float hip_rotator_influence = 0.0f;
 
-    switch(weapon_animation_type) {
+    switch(weapon_animation_set) {
 		case WEAPON_ANIMATION_TYPE_NONE: {
             state = UpperBodyAnimationState::RIFLE_IDLE;
             blend = 0.0f;
@@ -281,10 +326,27 @@ void BipedAnimationBase::_update_upper_body_state() {
                 blend = 0.0f;
                 state = UpperBodyAnimationState::RIFLE_IDLE;
             }
+            if (current_upper_body_sequence.has_value()) {
+                const StringName node_length = String(current_upper_body_sequence->node_path) + "/current_length";
+                const StringName node_pos = String(current_upper_body_sequence->node_path) + "/current_position";
+
+                const float length = model->get_animation_tree()->get(node_length);
+                const float current = model->get_animation_tree()->get(node_pos);
+                if (current >= length && get_current_upper_body_animation_state() == current_upper_body_sequence->upper_body_state) {
+                    // Animation finished, RIP
+                    print_line("DONE!", length, node_length);
+                    current_upper_body_sequence.reset();
+                } else {
+                    state = current_upper_body_sequence->upper_body_state;
+                }
+            }
+        } break;
+		case WEAPON_ANIMATION_SET_TYPE_MAX: {
+            ERR_FAIL_MSG("How did we get here?");
         } break;
 	}
 
-    float current_blend = model->get_animation_tree()->get("parameters/Locomotion/UpperBodyBlend/blend_amount");
+	float current_blend = model->get_animation_tree()->get("parameters/Locomotion/UpperBodyBlend/blend_amount");
 
     if (model->get_hip_rotator() != nullptr) {
         model->get_hip_rotator()->set_target_aim_angle(aim_x_angle);
@@ -302,12 +364,10 @@ void BipedAnimationBase::_update_upper_body_state() {
     }
 }
 
-bool BipedAnimationBase::get_is_aiming() const
-{
+bool BipedAnimationBase::get_is_aiming() const {
     return is_aiming;
 }
 
-void BipedAnimationBase::set_is_aiming(bool p_is_aiming)
-{
+void BipedAnimationBase::set_is_aiming(bool p_is_aiming) {
     is_aiming = p_is_aiming;
 }

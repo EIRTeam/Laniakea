@@ -1,10 +1,13 @@
 #pragma once
 
+#include "animation/inertialization_skeleton_modifier_polynomial.h"
 #include "bind_macros.h"
+#include "game/character_animation_settings.h"
 #include "game/character_hitbox_detector.h"
 #include "godot_cpp/classes/aim_modifier3d.hpp"
 #include "godot_cpp/classes/animation_tree.hpp"
 #include "godot_cpp/classes/node3d.hpp"
+#include "godot_cpp/classes/physical_bone_simulator3d.hpp"
 #include "godot_cpp/classes/skeleton3d.hpp"
 #include "springs.h"
 
@@ -25,6 +28,7 @@ class CharacterModel : public Node3D {
     CharacterHitboxDetector *hitbox_detector = nullptr;
     PhysicalBoneSimulator3D *ragdoll_simulator = nullptr;
     InertializationSkeletonModifierPolynomial *inertializer = nullptr;
+    Ref<CharacterAnimationSettings> animation_settings;
 
     Springs::QuaternionSpringCritical facing_spring;
     Quaternion target_facing_direction;
@@ -40,6 +44,7 @@ public:
     MAKE_SETTER_GETTER_VALUE(CharacterHitboxDetector *, hitbox_detector, hitbox_detector);
     MAKE_SETTER_GETTER_VALUE(PhysicalBoneSimulator3D *, ragdoll_simulator, ragdoll_simulator);
     MAKE_SETTER_GETTER_VALUE(InertializationSkeletonModifierPolynomial *, inertializer, inertializer);
+    MAKE_SETTER_GETTER_VALUE(Ref<CharacterAnimationSettings>, animation_settings, animation_settings);
     static void _bind_methods();
     void update(float p_delta);
     void set_target_facing_direction(Vector3 p_facing_direction);

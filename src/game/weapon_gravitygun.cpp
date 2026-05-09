@@ -64,6 +64,7 @@ void WeaponGravityGun::primary_attack(int p_weapon_slot, const WeaponButtonState
     params->set_from(aim_origin);
     params->set_to(aim_origin + aim_normal * pull_threshold_cvar.get_float());
     params->set_collision_mask(PhysicsLayers::LAYER_PROPS | PhysicsLayers::LAYER_WORLDSPAWN | PhysicsLayers::LAYER_ENTITY_HITBOXES);
+    params->set_exclude(p_character->get_attack_collision_exceptions());
 
     PhysicsDirectSpaceState3D *dss = p_character->get_world_3d()->get_direct_space_state();
     Dictionary ray_out = dss->intersect_ray(params);

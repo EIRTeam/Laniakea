@@ -1,11 +1,14 @@
 #pragma once
 
 #include "game/character_animation_base.h"
-#include "game/character_model.h"
 #include "game/movement_settings.h"
 #include "game/movement_shared.h"
 #include "godot_cpp/classes/animation_node_state_machine_playback.hpp"
 #include "godot_cpp/classes/curve.hpp"
+#include <array>
+#include <optional>
+
+class CharacterModel;
 
 class BipedAnimationBase : public CharacterAnimationBase {
     GDCLASS(BipedAnimationBase, Object);
@@ -21,7 +24,9 @@ public:
 
     enum UpperBodyAnimationState {
         RIFLE_IDLE,
-        RIFLE_AIM
+        RIFLE_AIM,
+        UPPER_BODY_STATE_RELOAD,
+        UPPER_BODY_STATE_MAX
     };
 protected:
     bool is_aiming = false;
@@ -30,12 +35,13 @@ protected:
     Ref<MovementSettings> movement_settings;
     CharacterModel *model;
 public:
-    enum WeaponAnimationType {
+    enum WeaponAnimationSetType {
         WEAPON_ANIMATION_TYPE_NONE,
-        WEAPON_ANIMATION_TYPE_RIFLE
+        WEAPON_ANIMATION_TYPE_RIFLE,
+        WEAPON_ANIMATION_SET_TYPE_MAX
     };
 protected:
-    WeaponAnimationType weapon_animation_type = WEAPON_ANIMATION_TYPE_NONE;
+    WeaponAnimationSetType weapon_animation_set = WEAPON_ANIMATION_TYPE_NONE;
 
     AnimationState desired_animation_state = AnimationState::LOCOMOTION;
     LocomotionAnimationState locomotion_state = LocomotionAnimationState::STANDING_STRAFING;
@@ -51,6 +57,13 @@ protected:
 
     StringName get_animation_state_string_name(const AnimationState p_state) const;
     String get_upper_body_animation_state_string(const UpperBodyAnimationState p_state) const;
+
+    struct CurrentUpperBodySequence {
+        StringName node_path;
+        UpperBodyAnimationState upper_body_state;
+    };
+
+    std::optional<CurrentUpperBodySequence> current_upper_body_sequence;
 
 public:
     static void _bind_methods();
@@ -82,12 +95,20 @@ public:
     void _update_upper_body_blend();
     void _update_upper_body_state();
 
-    WeaponAnimationType get_weapon_animation_type() const;
-    void set_weapon_animation_type(const WeaponAnimationType &weapon_animation_type_);
+    WeaponAnimationSetType get_weapon_animation_set() const;
+    void set_weapon_animation_set(const WeaponAnimationSetType &weapon_animation_type_);
 
     bool get_is_aiming() const;
     void set_is_aiming(bool is_aiming_);
 
     float get_aim_x_angle() const;
     void set_aim_x_angle(float aim_x_angle_);
+
+    enum UpperBodySequence {
+        SEQUENCE_RELOAD
+    };
+
+    void trigger_upper_body_sequence(UpperBodySequence p_sequence);
+    double get_upper_body_sequence_duration(UpperBodySequence p_sequence) const;
+    void abort_upper_body_sequence();
 };

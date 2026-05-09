@@ -93,6 +93,7 @@ public:
     const Vector<PropertyInfo> &get_command_arguments() const;
 
     float get_float() const;
+    int get_int() const;
     bool get_bool() const;
     Vector3 get_vector3() const;
 

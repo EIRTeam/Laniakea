@@ -1,5 +1,6 @@
 #include "milk_animation.h"
-#include "game/biped_animation_base.h"
+#include "biped_animation_base.h"
+#include "character_model.h"
 
 CVar MilkAnimation::milk_hanging_offset_max_cvar = CVar::create_variable("milk.hanging_offset_max", GDEXTENSION_VARIANT_TYPE_FLOAT, 0.1f, "Maximum amount of deviation milk can have in her velocity when hanging off the back", PROPERTY_HINT_NONE, "");
 CVar MilkAnimation::milk_hanging_spring_halflife_cvar = CVar::create_variable("milk.milk_hanging_spring_halflife", GDEXTENSION_VARIANT_TYPE_FLOAT, 0.1f, "Halflife for milk's hanging spring", PROPERTY_HINT_NONE, "");

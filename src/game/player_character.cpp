@@ -34,6 +34,50 @@
 CVar PlayerCharacter::player_camera_horizontal_deadzone_radius = CVar::create_variable("player.camera_horizontal_deadzone_radius", GDEXTENSION_VARIANT_TYPE_FLOAT, 0.1f, "Camera horizontal deadzone when not aiming.", PROPERTY_HINT_NONE, "");
 CVar PlayerCharacter::player_camera_distance_aim = CVar::create_variable("player.camera_distance_aim", GDEXTENSION_VARIANT_TYPE_FLOAT, 1.5f, "Camera distance when aiming.", PROPERTY_HINT_NONE, "");
 CVar PlayerCharacter::player_camera_distance = CVar::create_variable("player.camera_distance", GDEXTENSION_VARIANT_TYPE_FLOAT, 2.5f, "Camera distance when not aiming.", PROPERTY_HINT_NONE, "");
+CVar PlayerCharacter::player_get_primary_ammo_command = CVar::create_command("player.get_primary_ammo", "Get ammo for the primary weapon", { CVar::DelayedPropertyInfo (Variant::INT, "amount") });
+
+void PlayerCharacter::_on_weapon_equipped(int p_slot, Ref<WeaponInstanceBase> p_weapon) {
+    if (Ref<WeaponFirearmInstance> firearm = p_weapon; firearm.is_valid()) {
+        player_ui->notify_firearm_equipped(p_weapon, p_slot, get_ammo_in_weapon_clip(p_weapon->get_weapon_name()), get_remaining_ammo_in_pool(firearm->get_ammo_type()));
+    } else {
+        player_ui->notify_firearm_equipped(p_weapon, p_slot, -1, -1);
+    }
+}
+
+void PlayerCharacter::_on_weapon_reloaded(int p_slot, Ref<WeaponInstanceBase> p_weapon) {
+    if (Ref<WeaponFirearmInstance> firearm = p_weapon; firearm.is_valid()) {
+        player_ui->notify_firearm_reloaded(p_slot, get_ammo_in_weapon_clip(p_weapon->get_weapon_name()), get_remaining_ammo_in_pool(firearm->get_ammo_type()));
+    }
+}
+
+void PlayerCharacter::_on_weapon_ammo_used(int p_slot, Ref<WeaponInstanceBase> p_weapon) {
+    if (Ref<WeaponFirearmInstance> firearm = p_weapon; firearm.is_valid()) {
+        player_ui->notify_firearm_ammo_spent(p_slot, get_ammo_in_weapon_clip(p_weapon->get_weapon_name()), get_remaining_ammo_in_pool(firearm->get_ammo_type()));
+    }
+}
+
+void PlayerCharacter::_notify_ammo_acquired(int p_ammo_type) {
+    if (!equipped_weapons[WEAPON_SLOT_PRIMARY].is_valid()) {
+        return;
+    }
+    if (Ref<WeaponFirearmInstance> firearm = equipped_weapons[WEAPON_SLOT_PRIMARY]; firearm.is_valid()) {
+        if (firearm->get_ammo_type() == p_ammo_type) {
+            player_ui->notify_firearm_ammo_spent(WEAPON_SLOT_PRIMARY, get_ammo_in_weapon_clip(firearm->get_weapon_name()), get_remaining_ammo_in_pool(firearm->get_ammo_type()));
+        }
+    }
+}
+
+void PlayerCharacter::get_primary_ammo_command(int p_amount) {
+    Ref<WeaponInstanceBase> weapon = get_equipped_weapon(WEAPON_SLOT_PRIMARY);
+    Ref<WeaponFirearmInstance> firearm = weapon;
+
+    if (firearm.is_valid()) {
+        const int ammo_type = firearm->get_ammo_type();
+        ERR_FAIL_INDEX(ammo_type, character_state.ammo_pools.size());
+        character_state.ammo_pools[ammo_type] += p_amount;
+        _notify_ammo_acquired(ammo_type);
+    }
+}
 
 void PlayerCharacter::_bind_methods() {
     MAKE_BIND_NODE(PlayerCharacter, camera_offset_target, Node3D);
@@ -58,6 +102,8 @@ void PlayerCharacter::_ready() {
         return;
     }
 
+    player_get_primary_ammo_command.connect_command_callback(callable_mp(this, &PlayerCharacter::get_primary_ammo_command));
+
     Ref<WeaponRifleTest> rifle_test;
     Ref<WeaponGravityGun> gravity_gun_milk;
     rifle_test.instantiate();
@@ -67,13 +113,6 @@ void PlayerCharacter::_ready() {
 
     movement_settings = get_movement_settings();
 
-    /*Ref<MovementSettings> movement_settings = ResourceLoader::get_singleton()->load("res://player_movement.tres");
-    if (!movement_settings.is_valid()) {
-        // Fallback!
-        movement_settings.instantiate();
-    }
-    movement.initialize(movement_settings, this);
-    */
     camera = memnew(PlayerCamera);
     add_child(camera);
     camera->set_as_top_level(true);
@@ -96,7 +135,7 @@ void PlayerCharacter::_ready() {
 
     player_animation = Object::cast_to<BipedAnimationBase>(animation);
 
-    player_animation->set_weapon_animation_type(BipedAnimationBase::WEAPON_ANIMATION_TYPE_RIFLE);
+    player_animation->set_weapon_animation_set(BipedAnimationBase::WEAPON_ANIMATION_TYPE_RIFLE);
 
     add_aim_occlusion_exception(get_hitbox_detector_body_rid());
 }
@@ -315,7 +354,7 @@ void PlayerCharacter::add_camera_kick(float p_max_vertical_kick_angle, float p_f
 }
 
 Ref<MovementSettings> PlayerCharacter::get_movement_settings() const {
-    Ref<MovementSettings> settings = ResourceLoader::get_singleton()->load("res://player_movement.tres");
+    Ref<MovementSettings> settings = ResourceLoader::get_singleton()->load("res://data/player_movement.tres");
     ERR_FAIL_COND_V(!settings.is_valid(), BaseCharacter::get_movement_settings());
     return settings;
 }
@@ -367,6 +406,6 @@ Vector2 PlayerCharacter::get_movement_vector() const {
     return input_state.movement_input;
 }
 
-CharacterAnimationBase *PlayerCharacter::create_animation() const {
+BipedAnimationBase *PlayerCharacter::create_animation() const {
     return memnew(BipedAnimationBase);
 }

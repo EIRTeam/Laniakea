@@ -18,6 +18,7 @@
 #include "game/base_character.h"
 #include "game/biped_animation_base.h"
 #include "game/bullet_trail.h"
+#include "game/character_animation_settings.h"
 #include "game/character_hitbox.h"
 #include "game/character_hitbox_detector.h"
 #include "game/character_model.h"
@@ -57,6 +58,7 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level)
 	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
 		return;
 	}
+	GDREGISTER_CLASS(CharacterAnimationSettings);
 	GDREGISTER_CLASS(IndirectMesh);
 	GDREGISTER_CLASS(IndirectMeshInstance3D);
 	GDREGISTER_CLASS(TerrainScattererLODMesh);

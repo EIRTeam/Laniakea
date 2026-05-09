@@ -33,11 +33,17 @@ class PlayerCharacter : public BaseCharacter {
     };
 
     PlayerCharacterInputState input_state;
+    virtual void _on_weapon_equipped(int p_slot, Ref<WeaponInstanceBase> p_weapon) override;
+    virtual void _on_weapon_reloaded(int p_slot, Ref<WeaponInstanceBase> p_weapon) override;
+    virtual void _on_weapon_ammo_used(int p_slot, Ref<WeaponInstanceBase> p_weapon) override;
 public:
+    void _notify_ammo_acquired(int p_ammo_type);
+    void get_primary_ammo_command(int p_amount);
     Ref<MovementSettings> movement_settings;
     static CVar player_camera_horizontal_deadzone_radius;
     static CVar player_camera_distance_aim;
     static CVar player_camera_distance;
+    static CVar player_get_primary_ammo_command;
     MAKE_SETTER_GETTER_VALUE(Node3D *, camera_offset_target, camera_offset_target);
     MAKE_SETTER_GETTER_VALUE(PlayerUI *, player_ui, player_ui);
     static void _bind_methods();
@@ -61,7 +67,7 @@ public:
     virtual Vector3 get_look_direction() const override;
 
     Vector<StringName> get_available_weapon_items(WeaponSlot p_slot) const;
-    virtual CharacterAnimationBase *create_animation() const override;
+    virtual BipedAnimationBase *create_animation() const override;
 
     virtual Vector2 get_movement_vector() const override;
     virtual Vector2 get_movement_vector_transformed() const override;

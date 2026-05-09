@@ -4,8 +4,10 @@
 #include "game/bullet_trail.h"
 #include "game/character_hitbox_detector.h"
 #include "game/damageable.h"
+#include "game/game_rules_laniakea.h"
 #include "game/main_loop.h"
 #include "game/movement_settings.h"
+#include "game/weapon_firearm.h"
 #include "game/weapon_model.h"
 #include "godot_cpp/classes/node.hpp"
 #include "godot_cpp/classes/engine.hpp"
@@ -261,6 +263,59 @@ void BaseCharacter::remove_collision_exception(RID p_body) {
     movement.remove_collision_exception(p_body);
 }
 
+int BaseCharacter::get_remaining_ammo_in_pool(int p_ammo_type) const {
+    ERR_FAIL_INDEX_V(p_ammo_type, character_state.ammo_pools.size(), 0);
+    return character_state.ammo_pools[p_ammo_type];
+}
+
+void BaseCharacter::subtract_ammo_for_weapon(int p_slot, Ref<WeaponInstanceBase> p_weapon, int p_amount) {
+    auto it = character_state.weapon_clip_amounts.find(p_weapon->get_weapon_name());
+    if (it == character_state.weapon_clip_amounts.end()) {
+        character_state.weapon_clip_amounts[p_weapon->get_weapon_name()] = 0;
+    }
+
+    character_state.weapon_clip_amounts[p_weapon->get_weapon_name()] = MAX(character_state.weapon_clip_amounts[p_weapon->get_weapon_name()] - p_amount, 0);
+    
+    if (!equipped_weapons[0].is_valid()) {
+        return;
+    }
+
+    if (equipped_weapons[0]->get_weapon_name() == p_weapon->get_weapon_name()) {
+        _on_weapon_ammo_used(WEAPON_SLOT_PRIMARY, p_weapon);
+    }
+}
+
+void BaseCharacter::reload_weapon(int p_slot, Ref<WeaponInstanceBase> p_weapon, int p_ammo_type, int p_clip_capacity) {
+    const int ammo_type = p_ammo_type;
+
+    const StringName weapon_name = p_weapon->get_weapon_name();
+
+    auto it = character_state.weapon_clip_amounts.find(weapon_name);
+    if (it == character_state.weapon_clip_amounts.end()) {
+        character_state.weapon_clip_amounts[weapon_name] = 0;
+    }
+
+    const int rounds_to_add = MAX(p_clip_capacity - character_state.weapon_clip_amounts[weapon_name], 0);
+    const int final_amount_to_transfer_clamped = MIN(rounds_to_add, get_remaining_ammo_in_pool(ammo_type));
+    character_state.ammo_pools[ammo_type] -= final_amount_to_transfer_clamped;
+
+    character_state.weapon_clip_amounts[weapon_name] += final_amount_to_transfer_clamped;
+    _on_weapon_reloaded(p_slot, p_weapon);
+}
+
+int BaseCharacter::get_ammo_in_weapon_clip(StringName p_weapon_name) const {
+    auto it = character_state.weapon_clip_amounts.find(p_weapon_name);
+    return it != character_state.weapon_clip_amounts.end() ? it->value : 0;
+}
+
+void BaseCharacter::begin_reload() {
+    animation->trigger_upper_body_sequence(BipedAnimationBase::SEQUENCE_RELOAD);
+}
+
+double BaseCharacter::get_reload_duration() const {
+    return animation->get_upper_body_sequence_duration(BipedAnimationBase::SEQUENCE_RELOAD);
+}
+
 RID BaseCharacter::get_hitbox_detector_body_rid() const {
     CharacterHitboxDetector *hitbox_detector = get_model()->get_hitbox_detector();
     if (hitbox_detector) {
@@ -272,6 +327,10 @@ RID BaseCharacter::get_hitbox_detector_body_rid() const {
 
 BaseCharacter::BaseCharacter() {
     set_physics_interpolation_mode(PHYSICS_INTERPOLATION_MODE_ON);
+    character_state.ammo_pools.resize(LaniakeaGameRules::AmmoTypes::AMMO_TYPE_MAX);
+    for (int i = 0; i < character_state.ammo_pools.size(); i++) {
+        character_state.ammo_pools[i] = 0;
+    }
 }
 
 BaseCharacter::~BaseCharacter() {
@@ -293,12 +352,14 @@ void BaseCharacter::equip_weapon(WeaponSlot p_slot, Ref<WeaponInstanceBase> p_we
     equipped_weapons[p_slot] = p_weapon;
     
     if (!p_weapon.is_valid()) {
+        _on_weapon_equipped(p_slot, p_weapon);
         return;
     }
 
     p_weapon->equipped(p_slot, this);
 
     if (model->get_hand_attachment_node() == nullptr) {
+        _on_weapon_equipped(p_slot, p_weapon);
         return;
     }
 
@@ -306,4 +367,5 @@ void BaseCharacter::equip_weapon(WeaponSlot p_slot, Ref<WeaponInstanceBase> p_we
         model->get_hand_attachment_node()->add_child(weapon_visual);
         per_slot_weapon_visual[p_slot] = weapon_visual;
     }
+    _on_weapon_equipped(p_slot, p_weapon);
 }

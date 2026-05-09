@@ -1,5 +1,7 @@
 #include "character_model.h"
+#include "game/main_loop.h"
 #include "godot_cpp/classes/global_constants.hpp"
+#include "godot_cpp/classes/window.hpp"
 #include "godot_cpp/core/class_db.hpp"
 #include "godot_cpp/core/error_macros.hpp"
 #include "godot_cpp/core/property_info.hpp"
@@ -17,6 +19,7 @@ void CharacterModel::_bind_methods() {
     MAKE_BIND_NODE(CharacterModel, eye_position_node, Node3D);
     MAKE_BIND_NODE(CharacterModel, hitbox_detector, CharacterHitboxDetector);
     MAKE_BIND_NODE(CharacterModel, ragdoll_simulator, PhysicalBoneSimulator3D);
+    MAKE_BIND_RESOURCE(CharacterModel, animation_settings, CharacterAnimationSettings);
 }
 
 void CharacterModel::update(float p_delta) {

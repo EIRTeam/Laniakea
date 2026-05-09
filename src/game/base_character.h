@@ -6,6 +6,7 @@
 #include "character_model.h"
 #include "character_settings.h"
 #include "damageable.h"
+#include "game/character_hitbox_detector.h"
 #include "godot_cpp/core/binder_common.hpp"
 #include "godot_cpp/core/error_macros.hpp"
 
@@ -18,7 +19,7 @@ class BaseCharacter : public Node3D {
     GDCLASS(BaseCharacter, Node3D);
 protected:
     BaseMovement movement;
-    CharacterAnimationBase* animation = nullptr;
+    BipedAnimationBase* animation = nullptr;
 public:
     enum WeaponSlot {
         WEAPON_SLOT_PRIMARY,
@@ -33,6 +34,13 @@ protected:
     CharacterModel *model = nullptr;
     static void _bind_methods();
     TypedArray<RID> attack_collision_exceptions;
+
+    struct CharacterState {
+        int health = 50;
+        bool dead = false;
+        LocalVector<int> ammo_pools;
+        HashMap<StringName, int> weapon_clip_amounts;
+    } character_state;
 public:
     MAKE_SETTER_GETTER_VALUE(CharacterModel *, model, model);
     enum InputActionState {
@@ -56,6 +64,14 @@ public:
 
     FacingDirectionMode facing_direction_mode = TO_MOVEMENT;
 
+private:
+    void notify_dead(const Vector3 &p_last_hit_normal);
+    void _hit_received(const CharacterHitbox::HitboxGroup p_hitbox_group, const Vector3 &p_position, const Vector3 &p_normal, int p_ammo_type, float p_damage);
+    virtual void _on_bullet_hit_received(const CharacterHitbox::HitboxGroup p_hitbox_group, const Vector3 &p_position, const Vector3 &p_normal, int p_ammo_type, float p_damage);
+    virtual BipedAnimationBase *create_animation() const = 0;
+    virtual void _on_weapon_ammo_used(int p_slot, Ref<WeaponInstanceBase> p_weapon) {}
+    virtual void _on_weapon_equipped(int p_slot, Ref<WeaponInstanceBase> p_weapon) {}
+    virtual void _on_weapon_reloaded(int p_slot, Ref<WeaponInstanceBase> p_weapon) {}
 public:
     RID get_hitbox_detector_body_rid() const;
     virtual void _physics_process(double p_delta) override;
@@ -91,10 +107,15 @@ public:
     virtual Vector3 get_look_direction() const = 0;
 
     virtual Vector<StringName> get_available_items(WeaponSlot p_slot) const { return Vector<StringName>(); }
-    virtual CharacterAnimationBase *create_animation() const = 0;
-    RID get_hitbox_detector_body_rid() const;
 
     BaseMovement *get_movement() { return &movement; };
+    int get_remaining_ammo_in_pool(int p_ammo_type) const;
+    void subtract_ammo_for_weapon(int p_slot, Ref<WeaponInstanceBase> p_weapon, int p_amount);
+    void reload_weapon(int p_slot, Ref<WeaponInstanceBase> p_weapon, int p_ammo_type, int p_amount);
+    int get_ammo_in_weapon_clip(StringName p_weapon_name) const;
+
+    void begin_reload();
+    double get_reload_duration() const;
 };
 
 VARIANT_ENUM_CAST(BaseCharacter::WeaponSlot)

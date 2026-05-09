@@ -32,6 +32,41 @@ void PlayerUI::notify_unequip_item_requested(int p_slot) {
     }
 }
 
+void PlayerUI::notify_firearm_equipped(const Ref<WeaponFirearmInstance> &p_weapon, int p_slot, int p_chambered_ammo, int p_ammo_pool_total) {
+    if (p_slot != BaseCharacter::WEAPON_SLOT_PRIMARY) {
+        return;
+    }
+    ammo_label->set_visible(p_weapon.is_valid());
+
+    if (p_weapon.is_valid()) {
+        ammo_label->set_text(vformat("%d/%d", p_chambered_ammo, p_ammo_pool_total));
+    }
+}
+
+void PlayerUI::notify_firearm_ammo_spent(int p_slot, int p_chambered_ammo, int p_ammo_pool_total) {
+    if (p_slot != BaseCharacter::WEAPON_SLOT_PRIMARY) {
+        return;
+    }
+
+    ammo_label->set_text(vformat("%d/%d", p_chambered_ammo, p_ammo_pool_total));
+}
+
+void PlayerUI::notify_firearm_ammo_acquired(int p_slot, int p_chambered_ammo, int p_ammo_pool_total) {
+    if (p_slot != BaseCharacter::WEAPON_SLOT_PRIMARY) {
+        return;
+    }
+
+    ammo_label->set_text(vformat("%d/%d", p_chambered_ammo, p_ammo_pool_total));
+}
+
+void PlayerUI::notify_firearm_reloaded(int p_slot, int p_chambered_ammo, int p_ammo_pool_total) {
+    if (p_slot != BaseCharacter::WEAPON_SLOT_PRIMARY) {
+        return;
+    }
+
+    ammo_label->set_text(vformat("%d/%d", p_chambered_ammo, p_ammo_pool_total));
+}
+
 void PlayerUI::_bind_methods() {
     ADD_SIGNAL(MethodInfo("equip_item_requested", PropertyInfo(Variant::INT, "slot"), PropertyInfo(Variant::OBJECT, "item", PROPERTY_HINT_RESOURCE_TYPE, "WeaponInstanceBase")));
     ADD_SIGNAL(MethodInfo("unequip_item_requested", PropertyInfo(Variant::INT, "slot")));
@@ -43,6 +78,7 @@ void PlayerUI::_ready() {
     }
     crosshairs_container = get_node<Control>("%Crosshairs");
     occlusion_crosshairs_container = get_node<Control>("%OcclusionCrosshairs");
+    ammo_label = get_node<Label>("%AmmoLabel");
 }
 
 void PlayerUI::update(PlayerCharacter *p_player, float p_delta) {

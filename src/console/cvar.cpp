@@ -157,6 +157,12 @@ float CVar::get_float() const {
     return cvar_data->current_value;
 }
 
+int CVar::get_int() const {
+    DEV_ASSERT(!is_command());
+    DEV_ASSERT(cvar_data->type == GDEXTENSION_VARIANT_TYPE_INT);
+    return cvar_data->current_value;
+}
+
 bool CVar::get_bool() const {
     DEV_ASSERT(!is_command());
     DEV_ASSERT(cvar_data->type == GDEXTENSION_VARIANT_TYPE_BOOL);
