@@ -37,7 +37,7 @@ int CharacterHitbox::get_bone_idx() const {
 void CharacterHitbox::_update_debug_color() {
     Color c = Color(1.0f, 0.0f, 0.0f, 1.0f);
 
-    switch (category) {
+    switch (hitbox_group) {
 		case HEAD: {
             c = Color(0.0f, 1.0f, 0.0f);
         } break;
@@ -82,9 +82,9 @@ Vector3 CharacterHitbox::get_offset_translation() const {
 
 void CharacterHitbox::_bind_methods() {
     BIND_SETTER_GETTER(CharacterHitbox, offset);
-    BIND_SETTER_GETTER(CharacterHitbox, category);
+    BIND_SETTER_GETTER(CharacterHitbox, hitbox_group);
     ADD_PROPERTY(PropertyInfo(Variant::TRANSFORM3D, "offset", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), "set_offset", "get_offset");
-    ADD_PROPERTY(PropertyInfo(Variant::INT, "category", PROPERTY_HINT_ENUM, "Head,Arms,Legs,Torso"), "set_category", "get_category");
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "hitbox_group", PROPERTY_HINT_ENUM, "Head,Arms,Legs,Torso"), "set_hitbox_group", "get_hitbox_group");
 
     MAKE_BIND_T(CharacterHitbox, offset_rotation, Variant::VECTOR3, PROPERTY_HINT_RANGE, "-360,360,0.1,or_less,or_greater,radians_as_degrees");
     MAKE_BIND_T(CharacterHitbox, offset_translation, Variant::VECTOR3, PROPERTY_HINT_RANGE, "-99999,99999,or_greater,or_less,hide_control,suffix:m");
@@ -138,14 +138,15 @@ bool CharacterHitbox::_get(const StringName &p_name, Variant &r_ret) const {
     return false;
 }
 
-void CharacterHitbox::set_category(Category p_category) {
-    category = p_category;
+void CharacterHitbox::set_hitbox_group(HitboxGroup p_hitbox_group) {
+    hitbox_group = p_hitbox_group;
     _update_debug_color();
 }
 
-CharacterHitbox::Category CharacterHitbox::get_category() const { return category; }
+CharacterHitbox::HitboxGroup CharacterHitbox::get_hitbox_group() const { return hitbox_group; }
 
 CharacterHitbox::CharacterHitbox() {
+    _update_debug_color();
 }
 
 void CharacterHitbox::set_offset(Transform3D p_offset) {

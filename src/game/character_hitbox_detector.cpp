@@ -8,9 +8,9 @@ Skeleton3D *CharacterHitboxDetector::get_skeleton() const {
     return skeleton;
 }
 
-void CharacterHitboxDetector::notify_hit(const CharacterHitbox::Category p_category, const Vector3 &p_position, const Vector3 &p_normal) {
+void CharacterHitboxDetector::notify_hit(const CharacterHitbox::HitboxGroup p_hitbox_group, const Vector3 &p_position, const Vector3 &p_normal, int p_ammo_type, float p_damage) {
     static StringName hit_received = "hit_received";
-    emit_signal(hit_received, p_category, p_position, p_normal);
+    emit_signal(hit_received, p_hitbox_group, p_position, p_normal, p_ammo_type, p_damage);
 }
 
 void CharacterHitboxDetector::_ready() {
@@ -39,7 +39,7 @@ void CharacterHitboxDetector::update_pose_cache() {
 }
 
 void CharacterHitboxDetector::_bind_methods() {
-    ADD_SIGNAL(MethodInfo("hit_received", PropertyInfo(Variant::INT, "category"), PropertyInfo(Variant::VECTOR3, "position"), PropertyInfo(Variant::VECTOR3, "normal")));
+    ADD_SIGNAL(MethodInfo("hit_received", PropertyInfo(Variant::INT, "hitbox_group"), PropertyInfo(Variant::VECTOR3, "position"), PropertyInfo(Variant::VECTOR3, "normal"), PropertyInfo(Variant::INT, "ammo_type"), PropertyInfo(Variant::FLOAT, "damage")));
 }
 
 void CharacterHitboxDetector::on_bullet_damage_received(int p_ammo_type, float p_damage, const Vector3 &p_position, const Vector3 &p_normal, int p_shape_idx) {
@@ -54,7 +54,7 @@ void CharacterHitboxDetector::on_bullet_damage_received(int p_ammo_type, float p
 
     DEV_ASSERT(hb != nullptr);
     
-    notify_hit(hb->get_category(), p_position, p_normal);
+    notify_hit(hb->get_hitbox_group(), p_position, p_normal, p_ammo_type, p_damage);
 }
 
 CharacterHitboxDetector::CharacterHitboxDetector() {
@@ -70,8 +70,11 @@ void CharacterHitboxDetector::_notification(int p_what) {
                 SkeletonModifier3D *last_modifier = nullptr;
                 for (int i = 0; i < skeleton->get_child_count(); i++) {
                     if (SkeletonModifier3D *modifier = Object::cast_to<SkeletonModifier3D>(skeleton->get_child(i))) {
-                        modifier->connect("modification_processed", callable_mp(this, &CharacterHitboxDetector::update_pose_cache));
+                        last_modifier = modifier;
                     }
+                }
+                if (last_modifier) {
+                    last_modifier->connect("modification_processed", callable_mp(this, &CharacterHitboxDetector::update_pose_cache));
                 }
             }
         } break;

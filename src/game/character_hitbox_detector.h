@@ -12,7 +12,7 @@ class CharacterHitboxDetector : public StaticBody3D, public IDamageable {
     GDCLASS(CharacterHitboxDetector, Node3D);
     Skeleton3D *skeleton = nullptr;
     Vector<CharacterHitbox *> hitboxes;
-    void notify_hit(const CharacterHitbox::Category p_category, const Vector3 &p_position, const Vector3 &p_normal);
+    void notify_hit(const CharacterHitbox::HitboxGroup p_category, const Vector3 &p_position, const Vector3 &p_normal, int p_ammo_type, float p_damage);
     HashMap<StringName, Transform3D> global_pose_cache;
 public:
     virtual void _ready() override;

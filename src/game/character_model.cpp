@@ -16,6 +16,7 @@ void CharacterModel::_bind_methods() {
     MAKE_BIND_NODE(CharacterModel, hip_rotator, HipRotatorModifier3D);
     MAKE_BIND_NODE(CharacterModel, eye_position_node, Node3D);
     MAKE_BIND_NODE(CharacterModel, hitbox_detector, CharacterHitboxDetector);
+    MAKE_BIND_NODE(CharacterModel, ragdoll_simulator, PhysicalBoneSimulator3D);
 }
 
 void CharacterModel::update(float p_delta) {
@@ -39,4 +40,35 @@ Vector3 CharacterModel::get_target_facing_direction() const {
 Vector3 CharacterModel::get_eye_position() const {
     ERR_FAIL_NULL_V_MSG(eye_position_node, get_global_position(), "Tried to get eye position, but model doesn't have an eye position node");
     return eye_position_node->get_global_position();
+}
+
+void CharacterModel::notify_died(const Vector3 &p_last_hit_normal) {
+    // Create a copy of our current pose and turn into a ragdoll
+    CharacterModel *new_model = Object::cast_to<CharacterModel>(duplicate());
+    // Remove now unused modifiers
+    Skeleton3D* skel = new_model->get_skeleton();
+    for (int i = 0; i < skel->get_child_count(); i++) {
+        Node *child = skel->get_child(i);
+        if (Object::cast_to<SkeletonModifier3D>(child) && !Object::cast_to<PhysicalBoneSimulator3D>(child)) {
+            child->queue_free();
+        }
+
+        if (Object::cast_to<CharacterHitboxDetector>(child)) {
+            child->queue_free();
+        }
+    }
+
+    skel->set_owner(nullptr);
+
+    PhysicalBoneSimulator3D *simulator = new_model->ragdoll_simulator;
+
+    skel->get_parent()->remove_child(skel);
+    LaniakeaMainLoop::get_singleton()->get_root()->add_child(skel);
+    skel->set_global_transform(skeleton->get_global_transform());
+    new_model->queue_free();
+
+    if (simulator) {
+        simulator->set_active(true);
+        simulator->physical_bones_start_simulation();
+    }
 }

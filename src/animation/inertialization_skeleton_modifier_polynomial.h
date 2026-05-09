@@ -52,6 +52,8 @@ class InertializationSkeletonModifierPolynomial : public SkeletonModifier3D {
     void _update_data_arrays(double p_delta);
 public:
     void _run_process(double p_delta);
+    int get_current_frame_pose_bone_count() const;
+    Transform3D get_current_frame_pose_bone_pose(int p_idx) const;
     static void _bind_methods();
     void queue_inertialization();
     virtual void _process_modification_with_delta(double p_delta) override;

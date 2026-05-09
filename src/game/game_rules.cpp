@@ -61,3 +61,21 @@ Ref<WeaponInstanceBase> GameRules::weapon_from_item_name(StringName p_weapon_ite
 
     return weapon;
 }
+
+StringName GameRules::weapon_name_from_item_name(StringName p_weapon_item_name) const {
+    ERR_FAIL_COND_V_MSG(!item_types.has(p_weapon_item_name), "", vformat("Item %s not found!", p_weapon_item_name));
+    ERR_FAIL_COND_V_MSG(!item_types[p_weapon_item_name].flags.has_flag(IS_WEAPON), "", vformat("Item %s was not a weapon!", p_weapon_item_name));
+    
+    const StringName &weapon_name = item_types[p_weapon_item_name].weapon_name;
+    return weapon_name;
+}
+
+int GameRules::get_ammo_type_damage(int p_ammo_type, bool p_is_npc) const {
+    auto it = ammo_types.find(p_ammo_type);
+    ERR_FAIL_COND_V(it == ammo_types.end(), 0.0f);
+    if (p_is_npc) {
+        it->value.ammo_npc_damage_cvar->get_int();
+    }
+
+    return it->value.ammo_player_damage_cvar->get_int();
+}

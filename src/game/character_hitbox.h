@@ -16,7 +16,7 @@ class CharacterHitboxDetector;
 class CharacterHitbox : public CollisionShape3D {
     GDCLASS(CharacterHitbox, CollisionShape3D);
 public:
-    enum Category {
+    enum HitboxGroup {
         HEAD,
         ARMS,
         LEGS,
@@ -24,7 +24,7 @@ public:
     };
 private:
     StringName bone_name;
-    Category category = Category::ARMS;
+    HitboxGroup hitbox_group = HitboxGroup::ARMS;
     Transform3D offset;
 
     void _editor_visual_update(const Transform3D &p_bone_pose);
@@ -52,9 +52,9 @@ public:
     void _get_property_list(List<PropertyInfo> *p_list) const;
     bool _set(const StringName &p_name, const Variant &p_value);
     bool _get(const StringName &p_name, Variant &r_ret) const;
-	void set_category(Category p_category);
-	Category get_category() const;
+	void set_hitbox_group(HitboxGroup p_category);
+	HitboxGroup get_hitbox_group() const;
 	CharacterHitbox();
 };
 
-VARIANT_ENUM_CAST(CharacterHitbox::Category);
+VARIANT_ENUM_CAST(CharacterHitbox::HitboxGroup);

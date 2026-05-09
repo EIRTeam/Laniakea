@@ -1,5 +1,6 @@
 #include "inertialization_skeleton_modifier_polynomial.h"
 #include "godot_cpp/classes/skeleton3d.hpp"
+#include "godot_cpp/core/error_macros.hpp"
 #include "godot_cpp/core/math.hpp"
 #include "godot_cpp/core/print_string.hpp"
 #include "godot_cpp/variant/quaternion.hpp"
@@ -115,11 +116,8 @@ void InertializationSkeletonModifierPolynomial::_begin_inertialization(double p_
             inert_data[i].rot_offset_angle = x0_angle;
             inert_data[i].rot_velocity = v0;
             inert_data[i].rotation_accel = a0;
-            DEV_ASSERT(Math::is_finite(inert_data[i].rotation_A));
-            DEV_ASSERT(Math::is_finite(inert_data[i].rotation_B));
             DEV_ASSERT(Math::is_finite(v0));
             DEV_ASSERT(Math::is_finite(a0));
-            DEV_ASSERT(Math::is_finite(inert_data[i].rotation_transition_duration));
 
             inertialized_bones++;
 
@@ -132,6 +130,11 @@ void InertializationSkeletonModifierPolynomial::_begin_inertialization(double p_
                 inert_data[i].rotation_accel,
                 inert_data[i].rotation_transition_duration
             );
+
+            DEV_ASSERT(Math::is_finite(inert_data[i].rotation_A));
+            DEV_ASSERT(Math::is_finite(inert_data[i].rotation_B));
+            DEV_ASSERT(Math::is_finite(inert_data[i].rotation_transition_duration));
+
         }
     }
 
@@ -223,6 +226,15 @@ void InertializationSkeletonModifierPolynomial::_run_process(double p_delta)
     } else {
         _update_data_arrays(p_delta);
     }
+}
+
+int InertializationSkeletonModifierPolynomial::get_current_frame_pose_bone_count() const {
+    return current_frame_data.size();    
+}
+
+Transform3D InertializationSkeletonModifierPolynomial::get_current_frame_pose_bone_pose(int p_idx) const {
+    ERR_FAIL_INDEX_V(p_idx, current_frame_data.size(), Transform3D());
+    return Transform3D(current_frame_data[p_idx].rotation, current_frame_data[p_idx].position);
 }
 
 void InertializationSkeletonModifierPolynomial::_bind_methods() {

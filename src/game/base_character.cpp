@@ -21,6 +21,19 @@
 
 void BaseCharacter::_bind_methods() {
     MAKE_BIND_NODE(BaseCharacter, model, CharacterModel);
+    ADD_SIGNAL(MethodInfo("died", PropertyInfo(Variant::VECTOR3, "last_hit_normal")));
+    
+}
+
+void BaseCharacter::notify_dead(const Vector3 &p_last_hit_normal) {
+    character_state.dead = true;
+    emit_signal("died", p_last_hit_normal);
+    model->notify_died(p_last_hit_normal);
+    queue_free();
+}
+
+void BaseCharacter::_hit_received(const CharacterHitbox::HitboxGroup p_hitbox_group, const Vector3 &p_position, const Vector3 &p_normal, int p_ammo_type, float p_damage){
+    apply_damage(p_damage, p_normal);
 }
 
 Movement::MovementSpeed BaseCharacter::get_desired_movement_speed() const {
@@ -160,6 +173,14 @@ void BaseCharacter::_ready() {
     }
 
     add_attack_collision_exception(get_hitbox_detector_body_rid());
+    CharacterHitboxDetector *hitbox_detector = get_model()->get_hitbox_detector();
+    if (hitbox_detector) {
+        hitbox_detector->connect("hit_received", callable_mp(this, &BaseCharacter::_hit_received));
+    }
+
+    if (character_settings.is_valid()) {
+        character_state.health = character_settings->get_max_health();
+    }
 
     add_to_group("characters");
 }
@@ -173,6 +194,32 @@ void BaseCharacter::add_attack_collision_exception(RID p_rid) {
 
 void BaseCharacter::remove_attack_collision_exception(RID p_rid) {
     attack_collision_exceptions.erase(p_rid);
+}
+
+TypedArray<RID> BaseCharacter::get_attack_collision_exceptions() const {
+    return attack_collision_exceptions;
+}
+
+void BaseCharacter::_on_bullet_hit_received(const CharacterHitbox::HitboxGroup p_hitbox_group, const Vector3 &p_position, const Vector3 &p_normal, int p_ammo_type, float p_damage) {
+    if (character_state.dead) {
+        return;
+    }
+
+    int damage = p_damage;
+    if (p_hitbox_group == CharacterHitbox::HitboxGroup::HEAD) {
+        static constexpr float headshot_multiplier = 3.0f;
+        damage = p_damage * headshot_multiplier;
+    }
+
+    apply_damage(damage, p_normal);
+}
+
+void BaseCharacter::apply_damage(int p_damage, const Vector3 &p_last_hit_normal) {
+    DEV_ASSERT(p_damage >= 0);
+    character_state.health = MAX(character_state.health - p_damage, 0);
+    if (character_state.health == 0 && !character_state.dead) {
+        notify_dead(p_last_hit_normal);
+    }
 }
 
 Ref<MovementSettings> BaseCharacter::get_movement_settings() const {

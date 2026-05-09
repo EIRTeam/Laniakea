@@ -81,4 +81,6 @@ public:
     StringName item_get_localization_name(StringName p_item_name) const;
     StringName item_get_localization_description(StringName p_item_name) const;
     Ref<WeaponInstanceBase> weapon_from_item_name(StringName p_weapon_item_name) const;
+    StringName weapon_name_from_item_name(StringName p_weapon_item_name) const;
+    int get_ammo_type_damage(int p_ammo_type, bool p_is_npc = false) const;
 };

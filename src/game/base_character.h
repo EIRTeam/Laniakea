@@ -56,6 +56,12 @@ public:
 
     FacingDirectionMode facing_direction_mode = TO_MOVEMENT;
 
+public:
+    RID get_hitbox_detector_body_rid() const;
+    virtual void _physics_process(double p_delta) override;
+    virtual void _process(double p_delta) override;
+    virtual void _ready() override;
+
     Movement::MovementSpeed get_desired_movement_speed() const;
     virtual Vector2 get_movement_vector() const = 0;
     virtual Vector2 get_movement_vector_transformed() const = 0;
@@ -66,11 +72,10 @@ public:
     bool is_action_just_released(InputCommand p_command) const;
     virtual void get_aim_trajectory(int p_weapon_slot, Vector3 &r_origin, Vector3 &r_direction);
     virtual void fire_bullet(const Vector3 &p_origin, const Vector3 &p_direction, float p_distance, int p_ammo_type, float p_damage, bool p_fire_visual_from_origin = false);
-    virtual void _physics_process(double p_delta) override;
-    virtual void _process(double p_delta) override;
-    virtual void _ready() override;
     void add_attack_collision_exception(RID p_rid);
     void remove_attack_collision_exception(RID p_rid);
+    TypedArray<RID> get_attack_collision_exceptions() const;
+    virtual void apply_damage(int p_damage, const Vector3 &p_last_hit_normal);
     virtual Ref<MovementSettings> get_movement_settings() const;
     BaseCharacter();
     virtual ~BaseCharacter();

@@ -23,6 +23,8 @@ class CharacterModel : public Node3D {
     Node3D *hand_attachment_node = nullptr;
     Node3D *eye_position_node = nullptr;
     CharacterHitboxDetector *hitbox_detector = nullptr;
+    PhysicalBoneSimulator3D *ragdoll_simulator = nullptr;
+    InertializationSkeletonModifierPolynomial *inertializer = nullptr;
 
     Springs::QuaternionSpringCritical facing_spring;
     Quaternion target_facing_direction;
@@ -36,9 +38,13 @@ public:
     MAKE_SETTER_GETTER_VALUE(Node3D *, eye_position_node, eye_position_node);
     MAKE_SETTER_GETTER_VALUE(HipRotatorModifier3D *, hip_rotator, hip_rotator);
     MAKE_SETTER_GETTER_VALUE(CharacterHitboxDetector *, hitbox_detector, hitbox_detector);
+    MAKE_SETTER_GETTER_VALUE(PhysicalBoneSimulator3D *, ragdoll_simulator, ragdoll_simulator);
+    MAKE_SETTER_GETTER_VALUE(InertializationSkeletonModifierPolynomial *, inertializer, inertializer);
     static void _bind_methods();
     void update(float p_delta);
     void set_target_facing_direction(Vector3 p_facing_direction);
     Vector3 get_target_facing_direction() const;
     Vector3 get_eye_position() const;
+
+    void notify_died(const Vector3 &p_last_hit_normal);
 };
