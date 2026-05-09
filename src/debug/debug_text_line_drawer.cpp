@@ -28,6 +28,7 @@ void DebugTextLineDrawer::_draw() {
 
 void DebugTextLineDrawer::clear_strings() {
     strings_to_draw.clear();
+    queue_redraw();
 }
 
 void DebugTextLineDrawer::add_string(const Vector3 &p_at, const String &p_text) {
