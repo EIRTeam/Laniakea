@@ -2,6 +2,7 @@
 
 #include "bind_macros.h"
 #include "godot_cpp/classes/resource.hpp"
+#include "vehicle/engine_sound_config.h"
 #include <optional>
 
 using namespace godot;
@@ -15,6 +16,7 @@ class LNVehicleEngineSettings : public Resource {
     int power_cut_frequency_hz = 20;
     float inertia = 0.12f;
     float idle_rpm = 1000.0f;
+    Ref<LNEngineSoundConfiguration> sound_config;
 
     struct BakedCurveData {
         float peak_power = 0.0f;
@@ -37,6 +39,7 @@ public:
     MAKE_SETTER_GETTER_FLOAT_VALUE(idle_rpm, idle_rpm);
     MAKE_SETTER_GETTER_FLOAT_VALUE(inertia, inertia);
     MAKE_SETTER_GETTER_VALUE(int, power_cut_frequency_hz, power_cut_frequency_hz);
+    MAKE_SETTER_GETTER_VALUE(Ref<LNEngineSoundConfiguration>, sound_config, sound_config);
 
     static void _bind_methods();
     float sample_torque_curve(float p_rpm) const;

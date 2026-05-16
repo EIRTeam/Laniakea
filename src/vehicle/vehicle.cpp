@@ -1,4 +1,5 @@
 #include "vehicle.h"
+#include "bind_macros.h"
 #include "debug/debug_overlay.h"
 #include "godot_cpp/classes/physics_direct_space_state3d.hpp"
 #include "godot_cpp/classes/physics_ray_query_parameters3d.hpp"
@@ -23,6 +24,7 @@ void LNVehicle::_apply_force(Vector3 p_force_global, Vector3 p_offset_global) {
 void LNVehicle::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_brake_percentage", "brake"), &LNVehicle::set_brake_percentage);
     ClassDB::bind_method(D_METHOD("set_steer_percentage", "steer"), &LNVehicle::set_steer_percentage);
+    MAKE_BIND_NODE(LNVehicle, audio_stream_player, AudioStreamPlayer);
 }
 
 Vector2 calculate_transient_slip(LNVehicle::WheelData &p_wheel, Vector2 p_wheel_velocity, double p_delta_inv) {

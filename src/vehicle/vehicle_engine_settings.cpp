@@ -1,4 +1,5 @@
 #include "vehicle_engine_settings.h"
+#include "bind_macros.h"
 #include "godot_cpp/classes/engine.hpp"
 #include "godot_cpp/classes/global_constants.hpp"
 #include "godot_cpp/core/error_macros.hpp"
@@ -47,6 +48,7 @@ void LNVehicleEngineSettings::_bind_methods() {
     MAKE_BIND_FLOAT(LNVehicleEngineSettings, coast_ref_nonlinearity);
     MAKE_BIND_FLOAT(LNVehicleEngineSettings, rpm_limit);
     MAKE_BIND_INT(LNVehicleEngineSettings, power_cut_frequency_hz);
+    MAKE_BIND_RESOURCE(LNVehicleEngineSettings, sound_config, LNEngineSoundConfiguration);
 
 	ClassDB ::bind_method(D_METHOD("set_"
 								   "torque_curve",

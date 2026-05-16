@@ -1,5 +1,7 @@
 #pragma once
 
+#include "bind_macros.h"
+#include "godot_cpp/classes/audio_stream_player.hpp"
 #include "godot_cpp/classes/rigid_body3d.hpp"
 #include "../console/cvar.h"
 #include "godot_cpp/core/binder_common.hpp"
@@ -39,6 +41,10 @@ public:
         float brake_percentage = 0.0f;
         float steer = 0.0f;
     } input;
+
+    AudioStreamPlayer *audio_stream_player = nullptr;
+
+    MAKE_SETTER_GETTER_VALUE(AudioStreamPlayer*, audio_stream_player, audio_stream_player)
 
     std::array<WheelData, static_cast<size_t>(LNVehicleWheelPosition::WHEEL_MAX)> wheels = {};
 
