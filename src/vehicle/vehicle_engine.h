@@ -30,9 +30,11 @@ class LNVehicleEngine : public RefCounted {
 public:
     MAKE_SETTER_GETTER_VALUE(Ref<LNVehicleEngineSettings>, engine_settings, engine_settings);
 
-    void update(float p_throttle, float p_clutch_torque, double p_delta);
+    void update(float p_throttle, float p_clutch_torque, float p_extra_inertia, double p_delta);
     void set_rpm(float p_rpm);
     float get_rpm() const;
+    float get_angular_velocity() const;
+    float get_output_torque() const;
     static void _bind_methods();
 
     void set_audio_stream_player(AudioStreamPlayer *p_audio_stream_player);

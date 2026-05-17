@@ -29,7 +29,7 @@ void LNVehicleEngineSettings::_ensure_torque_curve_baked() {
         const float torque = static_cast<float>(torque_entry[1].to_float());
 
         baked_curve_data->torque_curve[i] = { rpm, torque };
-        baked_curve_data->peak_power = MAX(baked_curve_data->peak_power, torque * rpm * LNMath::AV_2_RPM);
+        baked_curve_data->peak_power = MAX(baked_curve_data->peak_power, torque * rpm * LNMath::RPM_2_AV);
     }
 }
 

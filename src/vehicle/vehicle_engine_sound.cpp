@@ -49,7 +49,6 @@ void VehicleEngineSound::update_audio_map_params(SoundPlaybackMap &r_map) {
         float vol_b = Math::sin(crossfade_percentage * (Math_PI / 2.0f)); // 0.0 → 1.0
         stream_playback->set_stream_volume(r_map.lower->voice_idx, Math::linear2db(vol_a * r_map.volume_linear));
         stream_playback->set_stream_volume(r_map.higher->voice_idx, Math::linear2db(vol_b * r_map.volume_linear));
-        UtilityFunctions::prints(r_map.map_idx, r_map.lower->rpm_min, r_map.lower->rpm_max, crossfade_percentage);
     } else if (r_map.lower.has_value()) {
         stream_playback->set_stream_volume(r_map.lower->voice_idx, Math::linear2db(r_map.volume_linear));
     } else if (r_map.higher.has_value()) {
@@ -131,8 +130,6 @@ void VehicleEngineSound::update(float p_throttle, float p_rpm, float p_delta) {
 
     update_audio_map(sound_playback.lower_map, needed_map_lower);
     update_audio_map(sound_playback.higher_map, needed_map_higher);
-
-    UtilityFunctions::prints(needed_map_lower, needed_map_higher, effective_throttle * 100.0f);
 
     // Throttle crossfade
     if (sound_playback.lower_map.has_value() && sound_playback.higher_map.has_value()) {
