@@ -8,6 +8,7 @@
 #include "vehicle/vehicle_drivetrain.h"
 #include "vehicle/vehicle_engine.h"
 #include "vehicle/vehicle_settings.h"
+#include <optional>
 
 using namespace godot;
 
@@ -40,7 +41,6 @@ public:
         float slip_ratio = 0.0f;
         float slip_angle = 0.0f;
         float differential_tan_slip_angle = 0.0f;
-        float differential_slip_ratio = 0.0f;
         Vector3 contact_normal;
         float longitudinal_torque = 0.0f;
     };
@@ -67,7 +67,7 @@ public:
 
     MAKE_SETTER_GETTER_VALUE(Ref<LNVehicleSettings>, vehicle_settings, vehicle_settings);
 
-    void _apply_force(Vector3 p_force_global, Vector3 p_offset_global);
+    void _apply_force(Vector3 p_force_global, Vector3 p_offset_global, std::optional<Color> p_color = {});
 
     static void _bind_methods();
     virtual void _physics_process(double p_delta) override;

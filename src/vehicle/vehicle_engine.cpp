@@ -18,7 +18,7 @@ float LNVehicleEngine::compute_crossfade_t(float p_value,
     return (p_value - xfade_start) / (xfade_end - xfade_start);
 }
 
-void LNVehicleEngine::update(float p_throttle, float p_clutch_torque, float p_extra_inertia, double p_delta) {
+void LNVehicleEngine::update_output_torque(float p_throttle, double p_delta) {
     time += p_delta;
     
     const float current_rpm = LNMath::AV_2_RPM * angular_velocity;
@@ -55,10 +55,14 @@ void LNVehicleEngine::update(float p_throttle, float p_clutch_torque, float p_ex
     effective_throttle = final_throttle;
 
     const float gross_torque = engine_settings->sample_torque_curve(current_rpm, final_throttle);
-    const float current_torque = gross_torque - p_clutch_torque;
-    angular_velocity += (current_torque / engine_settings->get_inertia()) * p_delta;
-    angular_velocity = MAX(angular_velocity, 0.0f);
     output_torque = gross_torque;
+}
+
+void LNVehicleEngine::integrate_angular_velocity(float p_clutch_reaction_torque, float p_extra_inertia, double p_delta) {
+    // const float current_torque = output_torque - p_clutch_reaction_torque;
+    const float current_torque = output_torque + p_clutch_reaction_torque;
+    angular_velocity += (current_torque / (engine_settings->get_inertia() + p_extra_inertia)) * p_delta;
+    angular_velocity = MAX(angular_velocity, 0.0f);
 
     if (asp != nullptr) {
         sound.set_sound_config(engine_settings->get_sound_config());
@@ -93,7 +97,7 @@ float LNVehicleEngine::get_output_torque() const {
 }
 
 void LNVehicleEngine::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("update", "throttle", "clutch_torque", "extra_inertia", "delta"), &LNVehicleEngine::update);
+    ClassDB::bind_method(D_METHOD("update", "throttle", "clutch_torque", "extra_inertia", "delta"), &LNVehicleEngine::update_output_torque);
     ClassDB::bind_method(D_METHOD("set_rpm", "rpm"), &LNVehicleEngine::set_rpm);
     ClassDB::bind_method(D_METHOD("set_audio_stream_player", "asp"), &LNVehicleEngine::set_audio_stream_player);
     ClassDB::bind_method(D_METHOD("get_rpm"), &LNVehicleEngine::get_rpm);

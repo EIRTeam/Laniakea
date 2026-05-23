@@ -14,12 +14,12 @@ class LNVehicleDrivetrainSettings : public Resource {
     PackedFloat32Array negative_gearbox_ratios;
     PackedFloat32Array positive_gearbox_ratios;
 
-    float clutch_max_torque = 500.0f;
+    float clutch_max_torque = 400.0f;
     float clutch_response_rate = 15.0f;
     float clutch_lock_threshold = 0.5f;
     float final_ratio = 4.0f;
-    float autoclutch_min = 600.0f;
-    float autoclutch_max = 1200.0f;
+    float autoclutch_min = 1200.0f;
+    float autoclutch_max = 1800.0f;
 public:
 
     MAKE_SETTER_GETTER_FLOAT_VALUE(clutch_max_torque, clutch_max_torque);
