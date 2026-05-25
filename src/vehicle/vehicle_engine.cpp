@@ -2,8 +2,10 @@
 #include "bind_macros.h"
 #include "godot_cpp/core/math.hpp"
 #include "math.h"
+#include "vehicle/shaft.h"
 #include <algorithm>
 #include <functional>
+#include "debug_icons.h"
 
 float LNVehicleEngine::compute_crossfade_t(float p_value,
                                        float p_lower_min, float p_lower_max,
@@ -84,6 +86,38 @@ void LNVehicleEngine::set_audio_stream_player(AudioStreamPlayer *p_audio_stream_
     }
 }
 
+LNVehicleShaft::UpstreamData LNVehicleEngine::get_upstream_data() {
+    return {
+        .inertia = engine_settings->get_inertia(),
+        .angular_velocity = get_angular_velocity()
+    };
+}
+
+int LNVehicleEngine::get_output_count() const {
+    return 0;
+}
+
+bool LNVehicleEngine::has_input() const {
+    return true;
+}
+
+void LNVehicleEngine::pre_update(float p_delta, const VehicleInputState &p_input_state) {
+    update_output_torque(p_input_state.throttle, p_delta);
+}
+
+void LNVehicleEngine::update(float p_delta, const VehicleInputState &p_input_state) {
+    integrate_angular_velocity(clutch_reaction_torque, 0.0f, p_delta);
+}
+
+void LNVehicleEngine::apply_reaction(const DownstreamData &p_data) {
+    clutch_reaction_torque = p_data.torque;
+    // TODO: Clutch inertia
+}
+
+String LNVehicleEngine::get_debug_text() const {
+    return vformat("RPM: %d\nEffective throttle: %.2f%%\nOutput torque: %.2f N m", get_rpm(), effective_throttle*100.0f, output_torque);
+}
+
 float LNVehicleEngine::get_rpm() const {
     return angular_velocity * LNMath::AV_2_RPM;
 }
@@ -102,4 +136,8 @@ void LNVehicleEngine::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_audio_stream_player", "asp"), &LNVehicleEngine::set_audio_stream_player);
     ClassDB::bind_method(D_METHOD("get_rpm"), &LNVehicleEngine::get_rpm);
     MAKE_BIND_RESOURCE(LNVehicleEngine, engine_settings, "LNVehicleEngineSettings");
+}
+
+String LNVehicleEngine::get_debugger_display_name() const {
+    return String::utf8(LNDebugIcons::ENGINE) + " " + get_name();
 }

@@ -4,10 +4,16 @@
 #include "godot_cpp/classes/audio_stream_player.hpp"
 #include "godot_cpp/classes/rigid_body3d.hpp"
 #include "../console/cvar.h"
+#include "godot_cpp/classes/window.hpp"
 #include "godot_cpp/core/binder_common.hpp"
-#include "vehicle/vehicle_drivetrain.h"
+#include "vehicle/clutch.h"
+#include "vehicle/shaft.h"
+#include "vehicle/vehicle_differential.h"
+#include "vehicle/vehicle_drivetrain_debugger.h"
 #include "vehicle/vehicle_engine.h"
 #include "vehicle/vehicle_settings.h"
+#include "vehicle/vehicle_wheel_shaft.h"
+#include "vehicle/vehicle_gearbox.h"
 #include <optional>
 
 using namespace godot;
@@ -27,31 +33,13 @@ class LNVehicle : public RigidBody3D {
 public:
     struct WheelData {
         LNVehicleWheel *wheel = nullptr;
-        float spring_displacement = 0.0f; // Positive is extended, negative is compressed
-        bool hit = false;
-        Vector3 hit_position;
-        float tire_force_longitudinal = 0.0f;
-        float tire_force_lateral = 0.0f;
-        float spring_force = 0.0f;
-        float spring_velocity = 0.0f;
-        float angular_velocity = 0.0f;
-        float angle = 0.0f;
-        float drive_torque = 0.0f;
-        float brake_torque = 0.0f;
-        float slip_ratio = 0.0f;
-        float slip_angle = 0.0f;
-        float differential_tan_slip_angle = 0.0f;
-        Vector3 contact_normal;
-        float longitudinal_torque = 0.0f;
+        Ref<LNVehicleWheelShaft> shaft;
     };
 
-    struct Input {
-        float brake_percentage = 0.0f;
-        float steer = 0.0f;
-        float throttle = 0.0f;
-        float clutch = 0.0f;
-        int gear = 0;
-    } input;
+    Window *debugger_window = nullptr;
+    LNVehicleDrivetrainDebugger *debugger = nullptr;
+
+    VehicleInputState input_state;
     void _apply_arb(int p_wheel_left, int p_wheel_right, float p_arb_stiffness);
     AudioStreamPlayer *audio_stream_player = nullptr;
 
@@ -61,9 +49,16 @@ public:
 
     CVar *vehicle_draw_wheels_cvar;
 
-    Ref<LNVehicleEngine> engine;
-    Ref<LNVehicleDrivetrain> drivetrain;
     Ref<LNVehicleSettings> vehicle_settings;
+
+    // Nodes
+    Ref<LNVehicleEngine> engine;
+    Ref<LNVehicleClutchNode> clutch;
+    Ref<LNVehicleDifferential> differential;
+    Ref<LNVehicleGearbox> gearbox;
+
+    HashMap<StringName, Ref<LNVehicleShaft>> shafts;
+    
 
     MAKE_SETTER_GETTER_VALUE(Ref<LNVehicleSettings>, vehicle_settings, vehicle_settings);
 
@@ -71,12 +66,7 @@ public:
 
     static void _bind_methods();
     virtual void _physics_process(double p_delta) override;
-    void _process_wheel_grounded(WheelData &p_wheel, const Vector3 &p_world_wheel_direction, float p_delta);
-    void _process_wheel_airborne(WheelData &p_wheel, const Vector3 &p_world_wheel_direction, const Vector3 &p_world_attachment_point, float p_delta);
     void _debug_draw();
-
-    Vector3 wheel_get_world_forward(LNVehicleWheel *p_wheel) const;
-    Vector3 wheel_get_world_right(LNVehicleWheel *p_wheel) const;
 
     void register_wheel(LNVehicleWheel *p_wheel);
     void unregister_wheel(LNVehicleWheel *p_wheel);
@@ -92,8 +82,14 @@ public:
     float get_wheel_slip_ratio(LNVehicleWheelPosition p_wheel) const;
     float get_engine_torque() const;
     float get_engine_rpm() const;
+
+    void add_shaft(StringName p_name, Ref<LNVehicleShaft> p_shaft);
+    void connect_shaft(StringName p_from, StringName p_to, int p_output);
     virtual void _ready() override;
     LNVehicle();
+    void _notification(int p_what);
+
+    friend class LNVehicleDrivetrainDebugger;
 };
 
 VARIANT_ENUM_CAST(LNVehicleWheelPosition);

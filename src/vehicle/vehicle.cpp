@@ -1,6 +1,7 @@
 #include "vehicle.h"
 #include "bind_macros.h"
 #include "debug/debug_overlay.h"
+#include "godot_cpp/classes/control.hpp"
 #include "godot_cpp/classes/file_access.hpp"
 #include "godot_cpp/classes/physics_direct_space_state3d.hpp"
 #include "godot_cpp/classes/physics_ray_query_parameters3d.hpp"
@@ -9,15 +10,20 @@
 #include "godot_cpp/classes/engine.hpp"
 #include "godot_cpp/core/error_macros.hpp"
 #include "godot_cpp/core/math_defs.hpp"
+#include "godot_cpp/variant/string_name.hpp"
 #include "math.h"
+#include "vehicle/shaft.h"
+#include "vehicle/vehicle_drivetrain_debugger.h"
+#include "vehicle/vehicle_wheel_shaft.h"
 #include "vehicle_suspension_settings.h"
 #include "vehicle_wheel.h"
 #include "vehicle_wheel_settings.h"
 #include "../physics.h"
 #include <cfenv>
+#include <queue>
 
 void LNVehicle::_apply_arb(int p_wheel_left, int p_wheel_right, float p_arb_stiffness) {
-    WheelData &left  = wheels[p_wheel_left];
+    /*WheelData &left  = wheels[p_wheel_left];
     WheelData &right = wheels[p_wheel_right];
 
     if (!left.hit || !right.hit) return;
@@ -29,7 +35,7 @@ void LNVehicle::_apply_arb(int p_wheel_left, int p_wheel_right, float p_arb_stif
     _apply_force(-left.contact_normal  * arb_torque,
             left.hit_position  - get_global_position(), Color(1.0, 0.0, 0.0));
     _apply_force( right.contact_normal * arb_torque,
-            right.hit_position - get_global_position(), Color(1.0, 0.0, 0.0));
+            right.hit_position - get_global_position(), Color(1.0, 0.0, 0.0));*/
 }
 
 void LNVehicle::_apply_force(Vector3 p_force_global, Vector3 p_offset_global, std::optional<Color> p_color) {
@@ -62,25 +68,7 @@ void LNVehicle::_bind_methods() {
     BIND_ENUM_CONSTANT(WHEEL_FR);
 }
 
-void calculate_transient_slip(LNVehicle::WheelData &p_wheel, Vector2 p_wheel_velocity, double p_delta) {
-    static constexpr float longitudinal_relaxation_length = 0.1f;
-    static constexpr float lateral_relaxation_length = 0.3f;    
-    const float clamping_factor = 1.0f;
-
-    const Vector2 contact_patch_velocity = p_wheel_velocity;
-    const float wheel_radius = p_wheel.wheel->get_wheel_settings()->get_radius();
-    Vector2 slip_velocity = Vector2(contact_patch_velocity.x, p_wheel.angular_velocity * wheel_radius - contact_patch_velocity.y);
-    const float steady_state_slip_angle = Math::atan(slip_velocity.x / MAX(Math::abs(contact_patch_velocity.y), 1.0f));
-    const float slip_angle_delta = (p_delta / lateral_relaxation_length) * (slip_velocity.x - MAX(contact_patch_velocity.y, clamping_factor) * p_wheel.slip_angle);
-    p_wheel.differential_tan_slip_angle = CLAMP(p_wheel.differential_tan_slip_angle + slip_angle_delta, -Math::abs(Math::tan(steady_state_slip_angle)), Math::abs(Math::tan(steady_state_slip_angle)));
-    
-    const float steady_state_slip_ratio = slip_velocity.y / MAX(Math::abs(contact_patch_velocity.y), clamping_factor);
-    float slip_ratio_delta = (p_delta / longitudinal_relaxation_length) * (slip_velocity.y - MAX(Math::abs(contact_patch_velocity.y), clamping_factor) * p_wheel.slip_ratio);
-    p_wheel.slip_ratio = CLAMP(p_wheel.slip_ratio + slip_ratio_delta, -Math::abs(steady_state_slip_ratio), Math::abs(steady_state_slip_ratio));
-    p_wheel.slip_angle = Math::atan(p_wheel.differential_tan_slip_angle);
-}
-
-Vector2 brush_gdsim(Vector2 p_slip, float p_contact_patch, float p_coefficient_of_friction, float p_tire_stiffness, float p_y_force) {
+/*Vector2 brush_gdsim(Vector2 p_slip, float p_contact_patch, float p_coefficient_of_friction, float p_tire_stiffness, float p_y_force) {
 	// float con_patch = 0.35f;
     // float mu = 0.85f;
     // float tire_stiffness = 5.5f;
@@ -110,7 +98,7 @@ Vector2 brush_gdsim(Vector2 p_slip, float p_contact_patch, float p_coefficient_o
         DEV_ASSERT(vector.is_finite());
 		return vector;
     }
-}
+}*/
 
 Vector2 brush(Vector2 slip, Vector2 p_stiffness, float friction, float load) {
     float deflection = Math::sqrt(Math::pow(p_stiffness.y * slip.y, 2) + 
@@ -143,217 +131,62 @@ void LNVehicle::_physics_process(double p_delta) {
         return;
     }
 
-    while (input.gear > 0) {
-        input.gear--;
-        drivetrain->gear_up();
-    }
-    while (input.gear < 0) {
-        input.gear++;
-        drivetrain->gear_down();
-    }
+    // First of all, update from bottom up
+    LocalVector<Ref<LNVehicleShaft>> leaves;
+    LocalVector<Ref<LNVehicleShaft>> roots;
 
-    engine->set_engine_settings(vehicle_settings->get_engine_settings());
-    drivetrain->set_drivetrain_settings(vehicle_settings->get_drivetrain_settings());
-    Ref<PhysicsRayQueryParameters3D> raycast_params;
-    raycast_params.instantiate();
-    raycast_params->set_exclude({this});
-
-    PhysicsDirectSpaceState3D *dss = get_world_3d()->get_direct_space_state();
-
-    // Autoclutch: disengage below idle RPM, blend in above it. Take the more-disengaged of the two inputs.
-    const float autoclutch_min = vehicle_settings->get_drivetrain_settings()->get_autoclutch_min();
-    const float autoclutch_max = vehicle_settings->get_drivetrain_settings()->get_autoclutch_max();
-    const float clutch_amount = 1.0f - CLAMP(
-        Math::inverse_lerp(autoclutch_min, autoclutch_max, engine->get_rpm()),
-        0.0f, 1.0f
-    );
-
-    const float rd = wheels[WHEEL_RL].wheel->get_wheel_settings()->get_radius();
-    const float inert = 0.5f * wheels[WHEEL_RL].wheel->get_wheel_settings()->get_mass() * rd * rd;
-    Vector2 rear_wheel_angular_velocities = Vector2(wheels[WHEEL_RL].angular_velocity, wheels[WHEEL_RR].angular_velocity);
-    drivetrain->update(engine, input.throttle, MAX(clutch_amount, input.clutch), wheels[WHEEL_RL].angular_velocity, wheels[WHEEL_RR].angular_velocity, inert, p_delta);
-
-    const float wheel_masss = wheels[WHEEL_RL].wheel->get_wheel_settings()->get_mass();
-    const float wheel_radiuss = wheels[WHEEL_RL].wheel->get_wheel_settings()->get_radius();
-
-    float gearbox_downstream_inertia;
-    drivetrain->gearbox_get_downstream_inertia(gearbox_downstream_inertia, 0.0f);
-    float diff_inertia_l;
-    float diff_inertia_r;
-    drivetrain->diff_get_downstream_inertia(diff_inertia_l, diff_inertia_r, gearbox_downstream_inertia);
-    
-    float downstream_torque = drivetrain->gearbox_get_downstream_torque();
-
-    float wheel_moments[4];
-
-    for (int wheel_idx = 0; wheel_idx < WHEEL_MAX; wheel_idx++) {
-        WheelData &wheel_data = wheels[wheel_idx];
-        LNVehicleWheel *wheel = wheels[wheel_idx].wheel;
-
-        if (wheel == nullptr) {
-            continue;
-        }
-
-        wheel_data.tire_force_lateral = 0.0f;
-        wheel_data.tire_force_longitudinal = 0.0f;
-
-        Ref<LNVehicleSuspensionSettings> suspension_settings = wheel->get_suspension_settings();
-        Ref<LNVehicleWheelSettings> wheel_settings = wheel->get_wheel_settings();
-        if (suspension_settings.is_null() || wheel_settings.is_null()) {
-            continue;
-        }
-
-        const Vector3 world_attachment_point = to_global(wheel->get_top_attachment_point());
-        raycast_params->set_from(world_attachment_point);
-        // Straight down, for now
-        const Vector3 world_wheel_direction = get_global_basis().xform(Vector3(0.0, -1.0, 0.0));
-        const float wheel_radius = wheel_settings->get_radius();
-        raycast_params->set_from(world_attachment_point);
-        raycast_params->set_to(world_attachment_point + world_wheel_direction * (suspension_settings->get_maximum() + wheel_settings->get_radius()));
-
-        Dictionary result = dss->intersect_ray(raycast_params);
-        wheel_data.hit = !result.is_empty();
-        if (!wheel_data.hit) {
-            // Freewheel
-            _process_wheel_airborne(wheel_data, world_wheel_direction, world_attachment_point, p_delta);
-        } else {
-            wheel_data.contact_normal = result["normal"];
-            Vector3 to_contact = Vector3(result["position"]) - world_attachment_point;
-            float new_extension = to_contact.dot(world_wheel_direction)
-                                - wheel_settings->get_radius();
-            wheel_data.hit_position = result["position"];
-            wheel_data.spring_displacement = new_extension - suspension_settings->get_rest();
-            _process_wheel_grounded(wheel_data, world_wheel_direction, p_delta);
-        }
-        const float wheel_mass = wheel_settings->get_mass();
-        wheel_moments[wheel_idx] = (0.5f * wheel_mass * wheel_radius * wheel_radius);
-        if (wheel_idx == WHEEL_RL || wheel_idx == WHEEL_RR) {
-            wheel_moments[wheel_idx] += wheel_idx == WHEEL_RL ? diff_inertia_l : diff_inertia_r;
-        }
-    }
-
-    for (int wheel_idx = 0; wheel_idx < WHEEL_MAX; wheel_idx++) {
-
-        WheelData &wheel_data = wheels[wheel_idx];
-        LNVehicleWheel *wheel = wheels[wheel_idx].wheel;
-        Ref<LNVehicleWheelSettings> wheel_settings = wheel->get_wheel_settings();
-        const Vector3 world_attachment_point = to_global(wheel->get_top_attachment_point());
-        const float wheel_radius = wheel_settings->get_radius();
-        const Vector3 world_wheel_direction = get_global_basis().xform(Vector3(0.0, -1.0, 0.0));
-        Ref<LNVehicleSuspensionSettings> suspension_settings = wheel->get_suspension_settings();
-        Vector3 wheel_pos = world_attachment_point + world_wheel_direction * (suspension_settings->get_rest() + wheel_data.spring_displacement);
-        wheel->set_global_position(wheel_pos);
-
-        const float wheel_mass = wheel_settings->get_mass();
-        if (wheel_idx == WHEEL_RL || wheel_idx == WHEEL_RR) {
-            const Vector2 wheel_torques = Vector2(wheels[WHEEL_RL].tire_force_longitudinal * wheels[WHEEL_RL].wheel->get_wheel_settings()->get_radius(), wheels[WHEEL_RR].tire_force_longitudinal * wheels[WHEEL_RR].wheel->get_wheel_settings()->get_radius());
-            Vector2 diff_out = drivetrain->GetDownstreamTorque(downstream_torque, rear_wheel_angular_velocities, wheel_torques, Vector2(wheel_moments[WHEEL_RL], wheel_moments[WHEEL_RR]), p_delta);
-            wheel_data.drive_torque = (wheel_idx == WHEEL_RL) ? diff_out.x : diff_out.y;
-            wheel_data.drive_torque -= wheels[wheel_idx].tire_force_longitudinal * wheel_radius;
-        }
-
-        const float T_ext = wheel_data.drive_torque + wheels[wheel_idx].tire_force_longitudinal * wheel_radius;
-
-        DEV_ASSERT(Math::is_finite(T_ext));
-        DEV_ASSERT(Math::is_finite(wheel_radius));
+    for (KeyValue<StringName, Ref<LNVehicleShaft>> shaft : shafts) {
+        shaft.value->pre_update(p_delta, input_state);
         
-        const float wheel_moment = wheel_moments[wheel_idx];
-        const float torque_required_to_stop_wheel = -(T_ext + ((wheel_data.angular_velocity*wheel_moment)/p_delta));
-        const float brake_torque_available = 1000.0f * input.brake_percentage;
-        wheel_data.brake_torque = CLAMP(torque_required_to_stop_wheel, -brake_torque_available, brake_torque_available);
+        if (!shaft.value->has_input()) {
+            roots.push_back(shaft.value);
+        }
 
-        // Integrate wheel using the clamped force
-        wheel_data.angular_velocity += ((T_ext + wheel_data.brake_torque)
-                                    / wheel_moment) * p_delta;
-        wheel_data.angle += wheel_data.angular_velocity * p_delta;
-        // wheel->set_rotation(Vector3(wheel_data.angle * p_delta, wheel->get_steerable() ? input.steer * Math_PI * -0.25f : 0.0f, 0.0f));
-        wheel->set_rotation(Vector3(-wheel_data.angle, wheel->get_steerable() ? input.steer * Math_PI * -0.25f : 0.0f, 0.0f));
-
-        DebugOverlay::text(wheel_pos, vformat("%.2f", wheel_data.angular_velocity), Color(0.0, 0.0, 0.0, 1.0f));
+        if (shaft.value->get_output_count() == 0) {
+            leaves.push_back(shaft.value);
+        }
     }
-    // Front axle ARB
-    _apply_arb(WHEEL_FL, WHEEL_FR,
-            vehicle_settings->get_front_arb_stiffness());
 
-    // Rear axle ARB
-    _apply_arb(WHEEL_RL, WHEEL_RR,
-            vehicle_settings->get_rear_arb_stiffness());
+    // There should only be one root!
+    DEV_ASSERT(roots.size() <= 1);
 
-    _debug_draw();
+    // Wheels are special, they need to calculate the reaction torque and suspension forces beforehand
+    for (const WheelData &wheel_data : wheels) {
+        wheel_data.shaft->wheel_pre_update(p_delta, input_state, this, wheel_data.wheel);
+    }
+
+    // Wheels are updated, let's now propagate everything upstream
+    // roots take care of propagating and balancing the torque and angular velocity of their children
+    for (Ref<LNVehicleShaft> root : roots) {
+        std::queue<LNVehicleShaft*> update_queue;
+        update_queue.push(root.ptr());
+
+        while (!update_queue.empty()) {
+            update_queue.front()->update(p_delta, input_state);
+            for (int i = 0; i < update_queue.front()->get_output_count(); i++) {
+                if (LNVehicleShaft *child = update_queue.front()->get_child(i); child != nullptr) {
+                    update_queue.push(child);
+                }
+            }
+            update_queue.pop();
+        }
+    }
+
+    // Post-update wheels, this will integrate the wheel drivetrain components
+    for (const WheelData &wheel_data : wheels) {
+        wheel_data.shaft->wheel_post_update(p_delta, input_state, this, wheel_data.wheel);
+    }
+
+    // Finally, apply ARBs
+    wheels[WHEEL_FL].shaft->apply_arb(this, wheels[WHEEL_FR].shaft, vehicle_settings->get_front_arb_stiffness());
+    wheels[WHEEL_RL].shaft->apply_arb(this, wheels[WHEEL_RR].shaft, vehicle_settings->get_rear_arb_stiffness());
+
+    debugger->update();
 }
 
-void LNVehicle::_process_wheel_grounded(WheelData &p_wheel, const Vector3 &p_world_wheel_direction, float p_delta)
-{
-    const Ref<LNVehicleSuspensionSettings> suspension_settings = p_wheel.wheel->get_suspension_settings();
-    const float spring_rate = suspension_settings->get_spring_rate();
-
-    const Vector3 contact_velocity = LNPhysics::velocity_at_pos(this, p_wheel.hit_position);
-    const float contact_velocity_along_spring = p_world_wheel_direction.dot(contact_velocity);
-
-    // Positive velocity = compressing (bump), negative = extending (rebound)
-    const float critical_damp = Math::sqrt(spring_rate * get_mass() / 4.0f);
-    const float damping_coeff = (contact_velocity_along_spring >= 0.0f)
-        ? suspension_settings->get_bump() * critical_damp
-        : suspension_settings->get_rebound() * critical_damp;
-
-    const float spring_force  = spring_rate  * p_wheel.spring_displacement;
-    const float damping_force = damping_coeff * contact_velocity_along_spring;
-    const float out_spring_force = spring_force - damping_force;
-    p_wheel.spring_force = MIN(out_spring_force, 0.0f);
-
-    const Ref<LNVehicleWheelSettings> wheel_settings = p_wheel.wheel->get_wheel_settings();
-
-    const Vector3 world_wheel_forward = wheel_get_world_forward(p_wheel.wheel);
-    const Vector3 world_wheel_right = wheel_get_world_right(p_wheel.wheel);
-
-    DebugOverlay::filled_arrow(p_wheel.wheel->get_global_position(), p_wheel.wheel->get_global_position() + world_wheel_right * 2.0f, 0.1f, Color(0.0, 1.0, 0.0));
-
-    const float longitudinal_wheel_speed = contact_velocity.dot(world_wheel_forward);
-    const float lateral_wheel_speed = contact_velocity.dot(world_wheel_right);
-
-    _apply_force( -p_wheel.contact_normal * (p_wheel.spring_force), p_wheel.hit_position - get_global_position());
-
-    calculate_transient_slip(p_wheel, Vector2(lateral_wheel_speed, longitudinal_wheel_speed), p_delta);
-        
-    Vector2 tire_forces = brush_gdsim(Vector2(p_wheel.slip_angle, p_wheel.slip_ratio), wheel_settings->get_contact_patch(), wheel_settings->get_coefficient_of_friction(), wheel_settings->get_stiffness(), -p_wheel.spring_force);
-    p_wheel.tire_force_longitudinal = tire_forces.y;
-    p_wheel.tire_force_lateral = tire_forces.x;
-
-    _apply_force(world_wheel_forward * (-p_wheel.tire_force_longitudinal),
-            p_wheel.hit_position - get_global_position());
-    _apply_force(world_wheel_right * (-p_wheel.tire_force_lateral),
-            p_wheel.hit_position - get_global_position());
-}
-
-void LNVehicle::_process_wheel_airborne(WheelData &p_wheel, const Vector3 &p_world_wheel_direction, const Vector3 &p_world_attachment_point, float p_delta) {
-    const Ref<LNVehicleSuspensionSettings> suspension_settings = p_wheel.wheel->get_suspension_settings();
-    const float spring_rate = suspension_settings->get_spring_rate();
-    const float g_along_spring = get_gravity().dot(p_world_wheel_direction); // project gravity onto spring axis
-
-    const float unsprung_mass = p_wheel.wheel->get_wheel_settings()->get_mass();
-
-    const float bump_damping    = suspension_settings->get_bump();
-    const float rebound_damping = suspension_settings->get_rebound();
-
-    const float critical_damp = Math::sqrt(spring_rate * get_mass() / 4.0f);
-
-    // Pick damping based on compression vs extension
-    // Positive spring_velocity = compressing = bump
-    // Negative spring_velocity = extending   = rebound
-    const float damping_coeff = (p_wheel.spring_velocity >= 0.0f)
-        ? bump_damping * critical_damp
-        : rebound_damping * critical_damp;
-
-    const float f_net = unsprung_mass * g_along_spring
-        - spring_rate * p_wheel.spring_displacement
-        - damping_coeff * p_wheel.spring_velocity;
-
-    p_wheel.spring_velocity += (f_net / unsprung_mass) * p_delta;
-    p_wheel.spring_displacement += p_wheel.spring_velocity * p_delta;
-}
 
 void LNVehicle::_debug_draw() {
-    for (int wheel_idx = 0; wheel_idx < WHEEL_MAX; wheel_idx++) {
+    /*for (int wheel_idx = 0; wheel_idx < WHEEL_MAX; wheel_idx++) {
         WheelData &wheel_data = wheels[wheel_idx];
         LNVehicleWheel *wheel = wheels[wheel_idx].wheel;
 
@@ -376,21 +209,7 @@ void LNVehicle::_debug_draw() {
 
         const Vector3 spring_force = world_wheel_direction * (wheel_data.spring_force);
         DebugOverlay::sphere(world_attachment_point + world_wheel_direction * suspension_settings->get_rest(), 0.1f, wheel_data.hit ? Color(1.0f, 1.0f, 0.0f) : Color(1.0f, 0.0f, 0.0f), false);
-    }
-}
-
-Vector3 LNVehicle::wheel_get_world_forward(LNVehicleWheel *p_wheel) const {
-    if (p_wheel->get_steerable()) {
-        return get_global_basis().xform(Vector3(0.0f, 0.0f, -1.0f).rotated(Vector3(0.0, 1.0, 0.0), input.steer * Math_PI * -0.25f));
-    }
-    return get_global_basis().xform(Vector3(0.0f, 0.0f, -1.0f));
-}
-
-Vector3 LNVehicle::wheel_get_world_right(LNVehicleWheel *p_wheel) const {
-    if (p_wheel->get_steerable()) {
-        return get_global_basis().xform(Vector3(1.0f, 0.0f, 0.0f).rotated(Vector3(0.0, 1.0, 0.0), input.steer * Math_PI * -0.25f));
-    }
-    return get_global_basis().xform(Vector3(1.0f, 0.0f, 0.0f));
+    }*/
 }
 
 void LNVehicle::register_wheel(LNVehicleWheel *p_wheel) {
@@ -409,41 +228,43 @@ void LNVehicle::unregister_wheel(LNVehicleWheel *p_wheel) {
 }
 
 void LNVehicle::set_brake_percentage(float p_brake_percentage) {
-    input.brake_percentage = p_brake_percentage;
+    input_state.brake = p_brake_percentage;
 }
 
 void LNVehicle::set_steer_percentage(float p_steer_percentage) {
-    input.steer = p_steer_percentage;
+    input_state.steer = p_steer_percentage;
 }
 
 void LNVehicle::set_throttle_percentage(float p_throttle_percentage) {
-    input.throttle = p_throttle_percentage;
+    input_state.throttle = p_throttle_percentage;
 }
 
 void LNVehicle::set_clutch_percentage(float p_clutch_precentage) {
-    input.clutch = p_clutch_precentage;
+    input_state.clutch = p_clutch_precentage;
 }
 
 void LNVehicle::request_gear_up() {
-    input.gear += 1;
+    input_state.gear += 1;
 }
 
 void LNVehicle::request_gear_down() {
-    input.gear -= 1;
+    input_state.gear -= 1;
 }
 
 int LNVehicle::get_current_gear() const {
-    return drivetrain->get_current_gear();
+    return gearbox->get_current_gear();
 }
 
 float LNVehicle::get_wheel_slip_angle(LNVehicleWheelPosition p_wheel) const {
     ERR_FAIL_INDEX_V(p_wheel, wheels.size(), 0.0f);
-    return wheels[p_wheel].slip_angle;
+    //return wheels[p_wheel].slip_angle;
+    return 0.0f;
 }
 
 float LNVehicle::get_wheel_slip_ratio(LNVehicleWheelPosition p_wheel) const {
     ERR_FAIL_INDEX_V(p_wheel, wheels.size(), 0.0f);
-    return wheels[p_wheel].slip_ratio;
+    //return wheels[p_wheel].slip_ratio;
+    return 0.0f;
 }
 
 float LNVehicle::get_engine_torque() const {
@@ -454,12 +275,74 @@ float LNVehicle::get_engine_rpm() const {
     return engine->get_rpm();
 }
 
-void LNVehicle::_ready() {
-    std::feclearexcept(FE_INVALID | FE_OVERFLOW | FE_DIVBYZERO);
-    engine->set_audio_stream_player(audio_stream_player);
-    engine->set_rpm(1000.0f);
+void LNVehicle::add_shaft(StringName p_name, Ref<LNVehicleShaft> p_shaft) {
+    auto it = shafts.find(p_name);
+    ERR_FAIL_COND_MSG(it != shafts.end(), vformat("Tried to add shaft with name %s but shaft with that name already exists!", p_name));
 
-    float longitudinal_stiffness = 10000.0f;  // Cs — N per unit slip ratio
+    p_shaft->name = p_name;
+    shafts.insert(p_name, p_shaft);
+    p_shaft->initialize();
+    p_shaft->drivetrain_settings = get_vehicle_settings()->get_drivetrain_settings();
+}
+
+void LNVehicle::connect_shaft(StringName p_from, StringName p_to, int p_output) {
+	auto from_it = shafts.find(p_from);
+	ERR_FAIL_COND_MSG(
+        from_it == shafts.end(),
+        vformat(
+            "Tried to connect shaft %s to %s but parent shaft didn't exist!",
+            p_from,
+            p_to
+        )
+    );
+	auto to_it = shafts.find(p_to);
+	ERR_FAIL_COND_MSG(
+        to_it == shafts.end(),
+        vformat(
+            "Tried to connect shaft %s to %s but destination shaft didn't exist!",
+            p_to,
+            p_to
+        )
+    );
+
+	ERR_FAIL_INDEX_MSG(
+        p_output,
+        from_it->value->get_output_count(),
+        vformat(
+            "Tried to connect shaft %s to %s but the parent shaft only has %d outputs!",
+            p_from,
+            p_to,
+            from_it->value->get_output_count()
+        )
+    );
+
+	ERR_FAIL_COND_MSG(
+        from_it->value->get_child(p_output) != nullptr,
+        vformat(
+            "Tried to connect shaft %s to %s but the parent shaft already has a child connected to output %d!",
+            p_from,
+            p_to,
+            p_output
+        )
+    );
+
+	ERR_FAIL_COND_MSG(
+        from_it->value->get_child(p_output) != nullptr,
+        vformat(
+            "Tried to connect shaft %s to %s but %s already has a parent!",
+            p_from,
+            p_to,
+            p_to
+        )
+    );
+
+    from_it->value->children[p_output] = to_it->value.ptr();
+    to_it->value->parent = from_it->value.ptr();
+}
+
+void LNVehicle::_ready() {
+
+    /*float longitudinal_stiffness = 10000.0f;  // Cs — N per unit slip ratio
     float cornering_stiffness    = 10000.0f;  // Ca — N per radian of slip angle  
     float friction_coefficient   = 0.85f;      // μ  — peak friction, scales with load
 
@@ -479,12 +362,76 @@ void LNVehicle::_ready() {
         float normalized_force = tire_forces.x / vertical_force;
         fa->store_line(vformat("\t(%.4f, %.4f),", Math::rad_to_deg(angle), normalized_force));
     }
-    fa->store_line("]");
+    fa->store_line("]");*/
 }
 
 LNVehicle::LNVehicle() {
     set_linear_damp_mode(DAMP_MODE_REPLACE);
     set_linear_damp(0.0f);
-    engine.instantiate();
-    drivetrain.instantiate();
+}
+
+void LNVehicle::_notification(int p_what) {
+    switch (p_what) {
+        case NOTIFICATION_READY: {
+            // Setup drivetrain stuff
+
+            debugger_window = memnew(Window);
+            debugger_window->set_size(get_window()->get_size());
+            debugger_window->set_force_native(true);
+            add_child(debugger_window);
+            debugger = memnew(LNVehicleDrivetrainDebugger);
+            debugger_window->add_child(debugger);
+            debugger->set_anchors_and_offsets_preset(Control::PRESET_FULL_RECT);
+
+            const StringName GEARBOX_NAME = StringName("Gearbox");
+            const StringName DIFF_NAME = StringName("Differential");
+            const StringName CLUTCH_NAME = StringName("Clutch");
+            const StringName ENGINE_NAME = StringName("Engine");
+
+            std::array<StringName, 4> WHEEL_NAMES = {
+                "Wheel FL",
+                "Wheel FR",
+                "Wheel RL",
+                "Wheel RR"
+            };
+
+            static_assert(std::size(WHEEL_NAMES) == WHEEL_MAX);
+
+
+            engine.instantiate();
+            add_shaft(ENGINE_NAME, engine);
+            engine->set_engine_settings(get_vehicle_settings()->get_engine_settings());
+            engine->set_audio_stream_player(audio_stream_player);
+            engine->set_rpm(1000.0f);
+
+            gearbox.instantiate();
+            add_shaft(GEARBOX_NAME, gearbox);
+
+            differential.instantiate();
+            add_shaft(DIFF_NAME, differential);
+
+            clutch.instantiate();
+            add_shaft(CLUTCH_NAME, clutch);
+
+            connect_shaft(CLUTCH_NAME, ENGINE_NAME, 0);
+            connect_shaft(CLUTCH_NAME, GEARBOX_NAME, 1);
+            connect_shaft(GEARBOX_NAME, DIFF_NAME, 0);
+
+            for (int i = 0; i < wheels.size(); i++) {
+                wheels[i].shaft.instantiate();
+                if (wheels[i].wheel == nullptr) {
+                    continue;
+                }
+
+                add_shaft(WHEEL_NAMES[wheels[i].wheel->get_wheel_position()], wheels[i].shaft);
+            }
+
+            // Now connect the wheels
+
+            connect_shaft(DIFF_NAME, WHEEL_NAMES[WHEEL_RL], 0);
+            connect_shaft(DIFF_NAME, WHEEL_NAMES[WHEEL_RR], 1);
+
+            callable_mp(debugger, &LNVehicleDrivetrainDebugger::update_tree).call_deferred(this);
+        };
+    }
 }
