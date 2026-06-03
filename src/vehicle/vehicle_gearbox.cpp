@@ -37,7 +37,6 @@ void LNVehicleGearbox::apply_downstream(const DownstreamData &p_data) {
         .torque = p_data.torque * ratio,
         .reflected_inertia = net_upstream_inertia * (ratio * ratio)
     });
-    
 }
 
 void LNVehicleGearbox::pre_update(float p_delta, const VehicleInputState &p_input_state) {
