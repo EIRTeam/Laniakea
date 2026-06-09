@@ -14,19 +14,12 @@
 #include "vehicle/vehicle_settings.h"
 #include "vehicle/vehicle_wheel_shaft.h"
 #include "vehicle/vehicle_gearbox.h"
+#include "wheel_position.h"
 #include <optional>
 
 using namespace godot;
 
 class LNVehicleWheel;
-
-enum LNVehicleWheelPosition {
-    WHEEL_FL,
-    WHEEL_FR,
-    WHEEL_RL,
-    WHEEL_RR,
-    WHEEL_MAX
-};
 
 class LNVehicle : public RigidBody3D {
     GDCLASS(LNVehicle, RigidBody3D);

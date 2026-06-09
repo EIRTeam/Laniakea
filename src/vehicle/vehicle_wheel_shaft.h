@@ -1,9 +1,14 @@
 #pragma once
 
 #include "vehicle/shaft.h"
+#include "vehicle/vehicle_suspension_state.h"
+#include "vehicle/vehicle_wheel_settings.h"
+#include "vehicle_suspension_settings.h"
+#include <optional>
 
 class LNVehicle;
 class LNVehicleWheel;
+
 class LNVehicleWheelShaft : public LNVehicleShaft {
     GDCLASS(LNVehicleWheelShaft, LNVehicleShaft);
 
@@ -11,12 +16,10 @@ class LNVehicleWheelShaft : public LNVehicleShaft {
     float drive_reflected_inertia = 0.0f;
 
     struct SuspensionState {
-        float spring_displacement = 0.0f;
         bool grounded = false;
         Vector3 ground_hit_position;
-        float spring_force = 0.0f;
-        float spring_velocity = 0.0f;
         Vector3 contact_normal;
+        Transform3D wheel_transform;
     } suspension_state;
 
     struct WheelState {
@@ -32,12 +35,16 @@ class LNVehicleWheelShaft : public LNVehicleShaft {
         float net_reaction_torque = 0.0f;
     } wheel_state;
 
-    void _process_wheel_grounded(LNVehicle *p_vehicle_node, LNVehicleWheel *p_wheel_node, const Vector3 &p_world_wheel_direction, const VehicleInputState &p_input_state, float p_delta);
-    void _process_wheel_airborne(LNVehicle *p_vehicle_node, LNVehicleWheel *p_wheel_node, const Vector3 &p_world_wheel_direction, const Vector3 &p_world_attachment_point, const VehicleInputState &p_input_state, float p_delta);
+    std::optional<Transform3D> suspension_trf_vehicle_local;
+
+    LNVehicleSuspensionState *suspension_solver_state = nullptr;
+
+    void _process_wheel_grounded(const LNVehicleSuspensionSettings::SuspensionSolveResult &p_suspension_result, LNVehicle *p_vehicle_node, LNVehicleWheel *p_wheel_node, const VehicleInputState &p_input_state, float p_delta);
+    void _process_wheel_airborne(LNVehicle *p_vehicle_node, LNVehicleWheel *p_wheel_node, const VehicleInputState &p_input_state, float p_delta);
     Vector3 wheel_get_world_forward(LNVehicleWheel *p_wheel_node, LNVehicle *p_vehicle, const VehicleInputState &p_input_state) const;
 
     Vector3 wheel_get_world_right(LNVehicleWheel *p_wheel_node, LNVehicle *p_vehicle, const VehicleInputState &p_input_state) const;
-    void calculate_transient_slip(LNVehicleWheel *p_wheel_node, Vector2 p_wheel_velocity, double p_delta);
+    void calculate_transient_slip(Ref<LNVehicleWheelSettings> p_wheel_settings, Vector2 p_wheel_velocity, double p_delta);
 
 public:
     virtual String get_debugger_display_name() const override;
