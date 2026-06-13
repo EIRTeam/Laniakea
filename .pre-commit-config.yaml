@@ -1,0 +1,54 @@
+default_language_version:
+  python: python3
+
+exclude: ^godot-cpp/
+
+repos:
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v20.1.0
+    hooks:
+      - id: clang-format
+        exclude: ^godot-cpp/
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.4
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: (\.py|SConstruct)$
+        types_or: [text]
+      - id: ruff-format
+        files: (\.py|SConstruct)$
+        types_or: [text]
+        exclude: ^godot-cpp/
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.14.1 # Latest version that supports Python 3.8
+    hooks:
+      - id: mypy
+        files: \.py$
+        types_or: [text]
+        exclude: ^godot-cpp/
+
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.4.1
+    hooks:
+      - id: codespell
+        additional_dependencies: [tomli]
+        exclude: ^godot-cpp/
+
+  - repo: local
+    hooks:
+      - id: header-guards
+        name: header-guards
+        language: python
+        entry: python godot-cpp/misc/scripts/header_guards.py
+        files: \.h$
+        exclude: ^godot-cpp/
+
+      - id: file-format
+        name: file-format
+        language: python
+        entry: python godot-cpp/misc/scripts/file_format.py
+        types_or: [text]
+        exclude: ^godot-cpp/
