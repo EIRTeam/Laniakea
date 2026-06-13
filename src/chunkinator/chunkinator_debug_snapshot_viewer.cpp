@@ -26,7 +26,7 @@ void ChunkinatorDebugSnapshotViewer::_populate_layer_list() {
     layer_list->clear();
 
     LocalVector<ChunkinatorLayerDebugSnapshot> layers = debug_snapshot->get_per_layer_debug_data();
-    
+
     for (int i = 0; i < layers.size(); i++) {
         layer_list->add_item(vformat("%s \nAvg: %s", layers[i].layer->get_name(), prettify_interval(layers[i].average_generation_time_usec)));
     }
@@ -34,13 +34,13 @@ void ChunkinatorDebugSnapshotViewer::_populate_layer_list() {
 
 ChunkinatorDebugSnapshotViewer::ChunkinatorDebugSnapshotViewer(const Ref<ChunkinatorDebugSnapshot> &p_debug_snapshot) {
     debug_snapshot = p_debug_snapshot;
-    
+
     HBoxContainer *split = memnew(HBoxContainer);
     add_child(split);
     layer_viewer = memnew(ChunkinatorDebugLayerViewer);
     split->add_child(layer_viewer);
     layer_viewer->set_h_size_flags(Control::SIZE_EXPAND_FILL);
-    
+
     layer_list = memnew(ItemList);
     split->add_child(layer_list);
     layer_list->set_auto_width(true);
@@ -115,10 +115,10 @@ void ChunkinatorDebugLayerViewer::_notification(int p_what) {
 
             const Color deleted_chunk_color_border = Color(1.0, 0.0, 0.0);
             const Color deleted_chunk_color_fill = Color(1.0, 0.0, 0.0, 0.25);
-            
+
             const Color old_chunk_color_border = Color(0.75, 0.75, 0.75);
             const Color old_chunk_color_fill = Color(0.75, 0.75, 0.75, 0.25);
-            
+
             const Color new_chunk_color_border = Color(0.0, 1.0, 0.0);
             const Color new_chunk_color_fill = Color(0.0, 1.0, 0.0, 0.25);
 
@@ -126,13 +126,13 @@ void ChunkinatorDebugLayerViewer::_notification(int p_what) {
 
             for (Vector2i chunk : layer_snapshot.chunks) {
                 Color chunk_color_fill = old_chunk_color_fill;
-                
+
                 if (layer_snapshot.newly_generated_chunks.has(chunk)) {
                     chunk_color_fill = new_chunk_color_fill;
                 } else if (layer_snapshot.deleted_chunks.has(chunk)) {
                     chunk_color_fill = deleted_chunk_color_fill;
                 }
-                
+
                 const Rect2 chunk_rect = Rect2(Vector2(chunk) * layer_snapshot.layer->get_chunk_size(), Vector2(1.0, 1.0) * layer_snapshot.layer->get_chunk_size());
                 //draw_rect(draw_trf.xform(chunk_rect), chunk_color_fill);
             }
@@ -144,7 +144,7 @@ void ChunkinatorDebugLayerViewer::_notification(int p_what) {
             }
 
             for (Vector2i chunk : layer_snapshot.chunks) {
-                
+
                 Color chunk_color_border = old_chunk_color_border;
 
                 if (layer_snapshot.newly_generated_chunks.has(chunk)) {
@@ -171,7 +171,7 @@ void ChunkinatorDebugLayerViewer::_gui_input(const Ref<InputEvent> &p_event) {
         if (!ev->is_pressed()) {
             return;
         }
-        
+
         if (ev->get_button_index() == MOUSE_BUTTON_WHEEL_DOWN) {
             view_radius += 1000.0f;
             draw_trf_dirty = true;
@@ -195,10 +195,9 @@ void ChunkinatorDebugLayerViewer::_gui_input(const Ref<InputEvent> &p_event) {
 }
 
 void ChunkinatorDebugLayerViewer::_bind_methods() {
-    
+
 }
 
 ChunkinatorDebugLayerViewer::ChunkinatorDebugLayerViewer() {
     set_clip_contents(true);
 }
-

@@ -69,7 +69,7 @@ private:
         int task_count = 0;
         Rect2i generation_rect;
     };
-    
+
     ChunkinatorGenerationData generation_data;
     int max_dag_level = 0;
 
@@ -77,11 +77,11 @@ private:
     LocalVector<LayerDependency> layer_dependencies;
     LocalVector<Ref<ChunkinatorLayer>> layers;
     bool capture_debug_snapshot = true;
-    
+
     LocalVector<Ref<ChunkinatorLayer>> get_leaves();
     ChunkinatorBounds _world_rect_to_chunk_idx_bounds(Rect2i p_rect, int p_chunk_size, Vector2i p_padding) const;
     Rect2i generation_rect;
-    
+
     std::optional<LayerDependency> find_layer_dependency(StringName p_parent_name, StringName p_child_name) const;
     void _recalculate_bounds(Ref<ChunkinatorLayer> p_node, Rect2i p_child_bounds, Vector2i p_child_padding);
     void recalculate_bounds();

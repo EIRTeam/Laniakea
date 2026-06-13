@@ -9,18 +9,19 @@
 class RexbotNPCBase;
 
 class RexbotBehaviour {
-    RexbotAction *current_action = nullptr;
-    RexbotNPCBase *actor = nullptr;
+	RexbotAction *current_action = nullptr;
+	RexbotNPCBase *actor = nullptr;
 
-    virtual RexbotAction *get_initial_action() const = 0;
-    
-    void apply_action_result(const RexbotActionResult &p_result);
+	virtual RexbotAction *get_initial_action() const = 0;
+
+	void apply_action_result(const RexbotActionResult &p_result);
+
 public:
-    void initialize();
-    virtual void update(real_t p_delta);
-    RexbotBehaviour(RexbotNPCBase *p_actor) {
-        actor = p_actor;
-    }
-    String get_debug_string() const;
-    virtual ~RexbotBehaviour();
+	void initialize();
+	virtual void update(real_t p_delta);
+	RexbotBehaviour(RexbotNPCBase *p_actor) {
+		actor = p_actor;
+	}
+	String get_debug_string() const;
+	virtual ~RexbotBehaviour();
 };

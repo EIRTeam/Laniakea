@@ -42,7 +42,7 @@ int QuadTree::get_greater_or_equal_neighbor(const int p_node_idx, const NodeDire
     const TreeNode &node = nodes[p_node_idx];
     const TreeNode &parent = nodes[node.parent];
     for (int i = 0; i < 2; i++) {
-        
+
         if (parent.children[opposite_positions[i]] == p_node_idx) {
             return parent.children[positions[i]];
         }
@@ -81,7 +81,7 @@ bool QuadTree::can_subdivide_node(const TreeNode &p_node) const {
 
 Vector2i QuadTree::get_position_in_parent(const TreeNode &p_parent, const NodePosition p_position) const {
 	int depth_size = get_depth_size(p_parent.depth+1);
-	
+
 	Vector2i pos_in_parent;
 	switch (p_position) {
 		case NodePosition::POSITION_NW: {
@@ -97,7 +97,7 @@ Vector2i QuadTree::get_position_in_parent(const TreeNode &p_parent, const NodePo
 			pos_in_parent = Vector2i(0, depth_size);
         }
     }
-	
+
 	return pos_in_parent;
 }
 
@@ -208,7 +208,7 @@ TypedArray<Dictionary> QuadTree::get_leafs_bind() const {
             dict[StringName("rect")] = node.rect;
             dict[StringName("depth")] = node.depth;
             dict[StringName("idx")] = i;
-            
+
             int lod_mask = 0;
 
             LocalVector<NeighborData> neighbors;
@@ -271,7 +271,7 @@ void QuadTree::get_leafs(LocalVector<LeafInformation> &r_out_leaves) const {
         }
         LocalVector<NeighborData> neighbors;
         get_neighbors(i, neighbors);
-        
+
         BitField<LODMesh::LODMask> lod_mask = 0;
 
         for (const NeighborData &neighbor : neighbors) {

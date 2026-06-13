@@ -1,6 +1,7 @@
 import os
 from methods import generated_wrapper
-from typing import Generator, List, Optional, Union, cast
+from typing import List, Union
+
 
 class RDHeaderStruct:
     def __init__(self):
@@ -17,6 +18,7 @@ class RDHeaderStruct:
         self.vertex_offset = 0
         self.fragment_offset = 0
         self.compute_offset = 0
+
 
 def to_raw_cstring(value: Union[str, List[str]]) -> str:
     MAX_LITERAL = 16 * 1024
@@ -40,7 +42,11 @@ def to_raw_cstring(value: Union[str, List[str]]) -> str:
             # If none found, ensure we end with valid utf8.
             # https://github.com/halloleo/unicut/blob/master/truncate.py
             elif segment[-1] & 0b10000000:
-                last_11xxxxxx_index = [i for i in range(-1, -5, -1) if segment[i] & 0b11000000 == 0b11000000][0]
+                last_11xxxxxx_index = [
+                    i
+                    for i in range(-1, -5, -1)
+                    if segment[i] & 0b11000000 == 0b11000000
+                ][0]
                 last_11xxxxxx = segment[last_11xxxxxx_index]
                 if not last_11xxxxxx & 0b00100000:
                     last_char_length = 2
@@ -59,11 +65,21 @@ def to_raw_cstring(value: Union[str, List[str]]) -> str:
         return f'R"<!>({split[0].decode()})<!>"'
     else:
         # Wrap multiple segments in parenthesis to suppress `string-concatenation` warnings on clang.
-        return "({})".format(" ".join(f'R"<!>({segment.decode()})<!>"' for segment in split))
+        return "({})".format(
+            " ".join(f'R"<!>({segment.decode()})<!>"' for segment in split)
+        )
+
 
 def build_rd_header(filename: str, shader: str) -> None:
     include_file_in_rd_header(shader, header_data := RDHeaderStruct(), 0)
-    class_name = os.path.basename(shader).replace(".glsl", "").title().replace("_", "").replace(".", "") + "ShaderRD"
+    class_name = (
+        os.path.basename(shader)
+        .replace(".glsl", "")
+        .title()
+        .replace("_", "")
+        .replace(".", "")
+        + "ShaderRD"
+    )
 
     with generated_wrapper(filename) as file:
         file.write(f"""\
@@ -91,14 +107,15 @@ public:
 		}};
 		static const char *_compute_code = nullptr;
 """)
-        file.write(f"""\
+        file.write("""\
         setup(_compute_code);
         """)
 
-        file.write(f"""\
-}}
-}};
+        file.write("""\
+}
+};
 """)
+
 
 def include_file_in_rd_header(filename: str, header_data: RDHeaderStruct, depth: int):
     with open(filename, "r", encoding="utf-8") as fs:
@@ -137,20 +154,46 @@ def include_file_in_rd_header(filename: str, header_data: RDHeaderStruct, depth:
                     included_file = os.path.relpath(includeline)
 
                 else:
-                    included_file = os.path.relpath(os.path.dirname(filename) + "/" + includeline)
+                    included_file = os.path.relpath(
+                        os.path.dirname(filename) + "/" + includeline
+                    )
 
-                if included_file not in header_data.vertex_included_files and header_data.reading == "vertex":
+                if (
+                    included_file not in header_data.vertex_included_files
+                    and header_data.reading == "vertex"
+                ):
                     header_data.vertex_included_files += [included_file]
-                    if include_file_in_rd_header(included_file, header_data, depth + 1) is None:
-                        print_error(f'In file "{filename}": #include "{includeline}" could not be found!"')
-                elif included_file not in header_data.fragment_included_files and header_data.reading == "fragment":
+                    if (
+                        include_file_in_rd_header(included_file, header_data, depth + 1)
+                        is None
+                    ):
+                        print_error(
+                            f'In file "{filename}": #include "{includeline}" could not be found!"'
+                        )
+                elif (
+                    included_file not in header_data.fragment_included_files
+                    and header_data.reading == "fragment"
+                ):
                     header_data.fragment_included_files += [included_file]
-                    if include_file_in_rd_header(included_file, header_data, depth + 1) is None:
-                        print_error(f'In file "{filename}": #include "{includeline}" could not be found!"')
-                elif included_file not in header_data.compute_included_files and header_data.reading == "compute":
+                    if (
+                        include_file_in_rd_header(included_file, header_data, depth + 1)
+                        is None
+                    ):
+                        print_error(
+                            f'In file "{filename}": #include "{includeline}" could not be found!"'
+                        )
+                elif (
+                    included_file not in header_data.compute_included_files
+                    and header_data.reading == "compute"
+                ):
                     header_data.compute_included_files += [included_file]
-                    if include_file_in_rd_header(included_file, header_data, depth + 1) is None:
-                        print_error(f'In file "{filename}": #include "{includeline}" could not be found!"')
+                    if (
+                        include_file_in_rd_header(included_file, header_data, depth + 1)
+                        is None
+                    ):
+                        print_error(
+                            f'In file "{filename}": #include "{includeline}" could not be found!"'
+                        )
 
                 line = fs.readline()
 
@@ -180,7 +223,9 @@ class RAWHeaderStruct:
         self.code = ""
 
 
-def include_file_in_raw_header(filename: str, header_data: RAWHeaderStruct, depth: int) -> None:
+def include_file_in_raw_header(
+    filename: str, header_data: RAWHeaderStruct, depth: int
+) -> None:
     with open(filename, "r", encoding="utf-8") as fs:
         line = fs.readline()
 
@@ -188,7 +233,9 @@ def include_file_in_raw_header(filename: str, header_data: RAWHeaderStruct, dept
             while line.find("#include ") != -1:
                 includeline = line.replace("#include ", "").strip()[1:-1]
 
-                included_file = os.path.relpath(os.path.dirname(filename) + "/" + includeline)
+                included_file = os.path.relpath(
+                    os.path.dirname(filename) + "/" + includeline
+                )
                 include_file_in_raw_header(included_file, header_data, depth + 1)
 
                 line = fs.readline()

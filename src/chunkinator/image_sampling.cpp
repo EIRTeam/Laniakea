@@ -1,11 +1,12 @@
 #include "image_sampling.h"
+
 #include "profiling.h"
 
 float bilinearly_sample_image_single_channel(Ref<Image> p_image, int p_channel_idx, const Vector2 &p_uv) {
 	//FuncProfile;
 	const Size2i image_size = p_image->get_size();
 
-    DEV_ASSERT(p_uv.x >= 0.0);
+	DEV_ASSERT(p_uv.x >= 0.0);
 
 	// Convert to heightmap pixel coordinates
 	float u = p_uv.x * (image_size.x - 1);

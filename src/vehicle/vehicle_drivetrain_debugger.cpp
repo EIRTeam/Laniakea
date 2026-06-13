@@ -38,7 +38,7 @@ void LNVehicleDrivetrainDebugger::update_tree(LNVehicle *p_vehicle) {
 
         Vector<Label*> out_labels;
         Label* in_label = nullptr;
-        
+
         for (int i = 0; i < MAX(shaft->get_output_count(), 1); i++) {
             HBoxContainer *container = memnew(HBoxContainer);
             node->add_child(container);

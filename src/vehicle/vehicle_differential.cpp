@@ -24,10 +24,10 @@ LNVehicleShaft::UpstreamData LNVehicleDifferential::get_upstream_data() {
 void LNVehicleDifferential::apply_downstream(const DownstreamData &p_data) {
     /*const float ratio = drivetrain_settings->get_final_ratio();
     const float total_input_torque = p_data.torque * ratio;
-    
+
     // The inertia coming from the gearbox, transformed to the axle side
     float inertia_from_upstream = p_data.reflected_inertia * (ratio * ratio);
-    
+
     // 1. Total System sum
     float total_inertia = downstream_datas[0].inertia + downstream_datas[1].inertia + inertia_from_upstream;
     float total_net_torque = total_input_torque + downstream_datas[0].net_reaction_torque + downstream_datas[1].net_reaction_torque;
@@ -61,7 +61,7 @@ void LNVehicleDifferential::apply_downstream(const DownstreamData &p_data) {
 
     if (ratio != 0.0f) {
         float total_downstream_inertia = (p_data.reflected_inertia + differential_inertia) * (ratio * ratio);
-        
+
         inertia = total_downstream_inertia * 0.5f;
     } else {
     }
@@ -71,8 +71,8 @@ void LNVehicleDifferential::apply_downstream(const DownstreamData &p_data) {
     float right = 0.5f * total_torque + downstream_datas[1].net_reaction_torque;
 
 
-    const float estimated_angular_velocity_x = downstream_datas[0].angular_velocity + (left / downstream_datas[0].inertia) * delta; 
-    const float estimated_angular_velocity_y = downstream_datas[1].angular_velocity + (right / downstream_datas[1].inertia) * delta; 
+    const float estimated_angular_velocity_x = downstream_datas[0].angular_velocity + (left / downstream_datas[0].inertia) * delta;
+    const float estimated_angular_velocity_y = downstream_datas[1].angular_velocity + (right / downstream_datas[1].inertia) * delta;
     // Then how much torque do we need to add to make the wheels perfectly locked
     float angular_delta = (estimated_angular_velocity_x - estimated_angular_velocity_y) * 0.5f;
     float diff_locking_torque_x = downstream_datas[0].inertia * (angular_delta) / delta;

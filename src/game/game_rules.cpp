@@ -4,7 +4,7 @@
 #include "godot_cpp/core/class_db.hpp"
 
 void GameRules::register_ammo_type(int p_id, const StringName p_name, const StringName p_ammo_max_cvar, const StringName p_player_damage_cvar, const StringName p_npc_damage_cvar) {
-    
+
     ConsoleSystem *cs = ConsoleSystem::get_singleton();
 
     DEV_ASSERT(cs->get_cvar(p_ammo_max_cvar) != nullptr);
@@ -52,10 +52,10 @@ StringName GameRules::item_get_localization_description(StringName p_item_name) 
 Ref<WeaponInstanceBase> GameRules::weapon_from_item_name(StringName p_weapon_item_name) const {
     ERR_FAIL_COND_V_MSG(!item_types.has(p_weapon_item_name), nullptr, vformat("Item %s not found!", p_weapon_item_name));
     ERR_FAIL_COND_V_MSG(!item_types[p_weapon_item_name].flags.has_flag(IS_WEAPON), nullptr, vformat("Item %s was not a weapon!", p_weapon_item_name));
-    
+
     const StringName &weapon_name = item_types[p_weapon_item_name].weapon_name;
     ERR_FAIL_COND_V_MSG(!weapon_types.has(weapon_name), nullptr, vformat("Weapon %s not found!", weapon_name));
-    
+
     Ref<WeaponInstanceBase> weapon = ClassDB::instantiate(weapon_types[weapon_name].class_name);
     ERR_FAIL_COND_V_MSG(weapon.is_null(), nullptr, vformat("Failed to instantiate weapon %s's class %s!", weapon_name, weapon_types[weapon_name].class_name));
 
@@ -65,7 +65,7 @@ Ref<WeaponInstanceBase> GameRules::weapon_from_item_name(StringName p_weapon_ite
 StringName GameRules::weapon_name_from_item_name(StringName p_weapon_item_name) const {
     ERR_FAIL_COND_V_MSG(!item_types.has(p_weapon_item_name), "", vformat("Item %s not found!", p_weapon_item_name));
     ERR_FAIL_COND_V_MSG(!item_types[p_weapon_item_name].flags.has_flag(IS_WEAPON), "", vformat("Item %s was not a weapon!", p_weapon_item_name));
-    
+
     const StringName &weapon_name = item_types[p_weapon_item_name].weapon_name;
     return weapon_name;
 }

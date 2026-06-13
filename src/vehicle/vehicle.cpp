@@ -1,4 +1,5 @@
 #include "vehicle.h"
+
 #include "../physics.h"
 #include "bind_macros.h"
 #include "debug/debug_overlay.h"
@@ -21,6 +22,7 @@
 #include "vehicle_suspension_settings.h"
 #include "vehicle_wheel.h"
 #include "vehicle_wheel_settings.h"
+
 #include <cfenv>
 #include <queue>
 
@@ -106,8 +108,9 @@ Vector2 brush(Vector2 slip, Vector2 p_stiffness, float friction, float load) {
 	float deflection = Math::sqrt(Math::pow(p_stiffness.y * slip.y, 2) +
 			Math::pow(p_stiffness.x * slip.x, 2));
 
-	if (deflection == 0.0f)
+	if (deflection == 0.0f) {
 		return { 0.0f, 0.0f };
+	}
 
 	float crit_limit = friction * load * 0.5f;
 

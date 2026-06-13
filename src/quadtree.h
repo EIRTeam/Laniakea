@@ -11,7 +11,7 @@ using namespace godot;
 
 class QuadTree : public RefCounted {
     GDCLASS(QuadTree, RefCounted);
-    
+
     enum NodePosition {
         POSITION_NW,
 		POSITION_NE,

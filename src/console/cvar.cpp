@@ -122,7 +122,7 @@ void CVar::execute_command() {
 void CVar::execute_command_with_args(Vector<Variant> p_args) {
     DEV_ASSERT(is_command());
     Ref<CVarProxy> proxy = ConsoleSystem::get_singleton()->get_proxy(cvar_data->cvar_name);
-    
+
     Array args;
     args.resize(p_args.size()+1);
     args[0] = StringName("command_executed");
@@ -179,4 +179,3 @@ void CVarProxy::_bind_methods() {
     ADD_SIGNAL(MethodInfo("command_executed"));
     ADD_SIGNAL(MethodInfo("cvar_changed"));
 }
-

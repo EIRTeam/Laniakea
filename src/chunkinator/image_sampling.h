@@ -1,9 +1,9 @@
 #pragma once
 
+#include "godot_cpp/classes/image.hpp"
 #include "godot_cpp/core/defs.hpp"
 #include "godot_cpp/variant/vector2.hpp"
 #include "godot_cpp/variant/vector2i.hpp"
-#include "godot_cpp/classes/image.hpp"
 
 using namespace godot;
 

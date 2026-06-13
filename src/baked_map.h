@@ -6,11 +6,12 @@
 using namespace godot;
 
 class BakedMap {
-    Vector<float> data;
+	Vector<float> data;
 
-    Vector2i dimensions;
+	Vector2i dimensions;
+
 public:
-    void from_image(Ref<Image> p_image);
-    float sample_point(Vector2i p_point) const;
-    float bilinearly_sample(Vector2 p_uv) const;
+	void from_image(Ref<Image> p_image);
+	float sample_point(Vector2i p_point) const;
+	float bilinearly_sample(Vector2 p_uv) const;
 };

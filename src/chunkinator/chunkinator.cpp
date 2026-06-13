@@ -35,7 +35,7 @@ Vector2i get_chunk_indices(Vector2i p_pos, int p_chunk_size) {
         p_pos.x / p_chunk_size,
         p_pos.y / p_chunk_size
     );
-    
+
     // Handle negative positions
     if (p_pos.x < 0 && p_pos.x % p_chunk_size != 0) chunk.x--;
     if (p_pos.y < 0 && p_pos.y % p_chunk_size != 0) chunk.y--;
@@ -73,7 +73,7 @@ void Chunkinator::_recalculate_bounds(Ref<ChunkinatorLayer> p_node, Rect2i p_chi
 
     for (StringName parent : p_node->parents) {
         std::optional<LayerDependency> layer_dep = find_layer_dependency(parent, p_node->name);
-        
+
         ERR_FAIL_COND_MSG(!layer_dep.has_value(), "Bug?");
 
         Ref<ChunkinatorLayer> parent_node = get_layer(parent);
@@ -249,7 +249,7 @@ void Chunkinator::process_generation() {
             continue;
         }
         const bool task_completed = wtp->is_group_task_completed(tasks_for_level[i].task_id);
-        
+
         if (!task_completed) {
             all_done = false;
             continue;
@@ -263,7 +263,7 @@ void Chunkinator::process_generation() {
 
         wtp->wait_for_group_task_completion(tasks_for_level[i].task_id);
         tasks_for_level[i].task_state = ChunkinatorTask::COMPLETED;
-        
+
         // debug stuff
         if (!capture_debug_snapshot || !generation_data.debug_snapshot.is_valid()) {
             continue;

@@ -1,28 +1,30 @@
 #pragma once
 
 #include "godot_cpp/core/defs.hpp"
+
 #include <cstdint>
 namespace LNTimer {
-    enum class LNTimerUpdateMode {
-        PHYSICS,
-        PROCESS
-    };
-    
-    enum class LNTimerState : uint8_t {
-        TICKING,
-        STOPPED
-    };
+enum class LNTimerUpdateMode {
+	PHYSICS,
+	PROCESS
+};
 
-    class LNIntervalTimer {
-        LNTimerUpdateMode update_mode;
+enum class LNTimerState : uint8_t {
+	TICKING,
+	STOPPED
+};
 
-        double time = 0.0f;
+class LNIntervalTimer {
+	LNTimerUpdateMode update_mode;
 
-        double now() const;
-    public:
-        LNIntervalTimer (LNTimerUpdateMode p_update_mode);
-        bool is_greater_than(double p_time) const;
-        void reset();
-        void start();
-    };
-}
+	double time = 0.0f;
+
+	double now() const;
+
+public:
+	LNIntervalTimer(LNTimerUpdateMode p_update_mode);
+	bool is_greater_than(double p_time) const;
+	void reset();
+	void start();
+};
+} //namespace LNTimer

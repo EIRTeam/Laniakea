@@ -6,13 +6,12 @@
 using namespace godot;
 
 class CharacterSettings : public RefCounted {
-    GDCLASS(CharacterSettings, RefCounted);
+	GDCLASS(CharacterSettings, RefCounted);
 
-    int max_health = 100;
+	int max_health = 100;
 
-    
-    static void _bind_methods();
+	static void _bind_methods();
 
 public:
-    MAKE_SETTER_GETTER_VALUE(int32_t, max_health, max_health);
+	MAKE_SETTER_GETTER_VALUE(int32_t, max_health, max_health);
 };

@@ -3,14 +3,14 @@
 class RexbotAction;
 
 struct RexbotActionResult {
-    enum ResultType {
-        DONE,
-        CONTINUE,
-        SUSPEND_FOR,
-        CHANGE_TO
-    };
+	enum ResultType {
+		DONE,
+		CONTINUE,
+		SUSPEND_FOR,
+		CHANGE_TO
+	};
 
-    ResultType result_type;
-    const char* reason = nullptr;
-    RexbotAction *action = nullptr;
+	ResultType result_type;
+	const char *reason = nullptr;
+	RexbotAction *action = nullptr;
 };

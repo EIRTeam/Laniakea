@@ -1,4 +1,5 @@
 #include "vehicle_suspension.h"
+
 #include "debug/debug_overlay.h"
 #include "math.h"
 #include "vehicle_suspension_settings.h"
@@ -154,7 +155,7 @@ WheelIntersectionResult do_wheel_intersection(const Node3D *p_vehicle, Vector3 p
 		intersection -= right_offset;
 		intersection -= vertical_offset;
 
-		return WheelIntersectionResult{
+		return WheelIntersectionResult {
 			.hit = true,
 			.wheel_center_position = intersection,
 			.ground_hit_position = hit_result["position"],

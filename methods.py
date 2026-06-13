@@ -1,7 +1,7 @@
 import os
 import sys
 from enum import Enum
-from typing import Generator, List, Optional, Union, cast
+from typing import Generator, Optional
 from io import StringIO, TextIOBase
 import contextlib
 
@@ -9,6 +9,7 @@ import contextlib
 # that if output is redirected to a file, it won't contain color codes.
 # Colors are always enabled on continuous integration.
 _colorize = bool(sys.stdout.isatty() or os.environ.get("CI"))
+
 
 @contextlib.contextmanager
 def generated_wrapper(
@@ -26,7 +27,9 @@ def generated_wrapper(
     """
 
     with open(path, "wt", encoding="utf-8", newline="\n") as file:
-        if not path.endswith(".out"):  # For test output, we only care about the content.
+        if not path.endswith(
+            ".out"
+        ):  # For test output, we only care about the content.
             file.write("\n/* THIS FILE IS GENERATED. EDITS WILL BE LOST. */\n\n")
 
             if guard is None:
@@ -39,6 +42,7 @@ def generated_wrapper(
             file.write(str_io.getvalue().strip() or "/* NO CONTENT */")
 
         file.write("\n")
+
 
 class ANSI(Enum):
     """
@@ -76,12 +80,23 @@ class ANSI(Enum):
 
 def print_warning(*values: object) -> None:
     """Prints a warning message with formatting."""
-    print(f"{ANSI.YELLOW}{ANSI.BOLD}WARNING:{ANSI.REGULAR}", *values, ANSI.RESET, file=sys.stderr)
+    print(
+        f"{ANSI.YELLOW}{ANSI.BOLD}WARNING:{ANSI.REGULAR}",
+        *values,
+        ANSI.RESET,
+        file=sys.stderr,
+    )
 
 
 def print_error(*values: object) -> None:
     """Prints an error message with formatting."""
-    print(f"{ANSI.RED}{ANSI.BOLD}ERROR:{ANSI.REGULAR}", *values, ANSI.RESET, file=sys.stderr)
+    print(
+        f"{ANSI.RED}{ANSI.BOLD}ERROR:{ANSI.REGULAR}",
+        *values,
+        ANSI.RESET,
+        file=sys.stderr,
+    )
+
 
 def Run(env, function, comstr="$GENCOMSTR"):
     from SCons.Script import Action

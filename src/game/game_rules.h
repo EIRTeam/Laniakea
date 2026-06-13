@@ -32,7 +32,7 @@ class GameRules : public Object {
         StringName weapon_name;
         Ref<Texture2D> icon;
     };
-    
+
     HashMap<int, AmmoTypeInfo> ammo_types;
     HashMap<StringName, ItemTypeInfo> item_types;
 

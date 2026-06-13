@@ -7,7 +7,7 @@ void LNVehicleClutchNode::update(float p_delta, const VehicleInputState &p_input
     LNVehicleShaft *load_side = get_child(1);
 
     LNVehicleShaft::UpstreamData drive_side_data = drive_side->get_upstream_data();
-    
+
     LNVehicleShaft::UpstreamData load_side_data = load_side->get_upstream_data();
 
     const float autoclutch_min = drivetrain_settings->get_autoclutch_min();

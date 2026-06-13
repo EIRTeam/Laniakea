@@ -44,13 +44,13 @@ void ChunkinatorTest::_input(const Ref<InputEvent> &p_event) {
 }
 
 void ChunkinatorTest::_bind_methods() {
-    
+
 }
 
 void ChunkinatorTest::_notification(int p_what) {
     switch (p_what) {
         case NOTIFICATION_READY: {
-            
+
             Ref<TerrainSettings> settings = ResourceLoader::get_singleton()->load("res://terrain_settings.tres");
             plane_mesh = LODMesh::generate_mesh(settings->get_mesh_quality());
 
@@ -65,12 +65,12 @@ void ChunkinatorTest::_notification(int p_what) {
             Ref<TerrainFinalCombineLayer> heightmap_combine_layer;
             Ref<ChunkinatorGeneratorLayer> terrain_generator_layer;
             Ref<ChunkinatorGeneratorLayer> scatter_generator_layer;
-            
+
             Heightmap_Layer.instantiate();
             B_Layer.instantiate();
             Road_connection_Layer.instantiate();
             heightmap_combine_layer.instantiate();
-            
+
             const StringName heightmap_layer_name = "Heightmap Layer";
             const StringName heightmap_combine_layer_name = "Heightmap Combine Layer";
             const StringName b_layer_name = "Road Random Points";
@@ -98,7 +98,7 @@ void ChunkinatorTest::_notification(int p_what) {
             //chunkinator->add_layer_dependency(a_layer_name, "C Layer", Vector2i());
             //chunkinator->add_layer_dependency(b_layer_name, "D Layer", Vector2i());
             //chunkinator->add_layer_dependency("C Layer", "D Layer", Vector2i());
-            
+
             modified_heightmap_layer = Road_connection_Layer;
 
             for (int i = 0; i < settings->get_scatter_layer_count(); i++) {
@@ -117,9 +117,9 @@ void ChunkinatorTest::_notification(int p_what) {
 
                 Ref<ScatterLayer> worldgen_layer;
                 worldgen_layer.instantiate();
-                
+
                 worldgen_layer->initialize(scatter_layer_settings, point_layer);
-                
+
                 chunkinator->insert_layer(scatter_layer_settings->get_debug_name(), worldgen_layer);
 
                 chunkinator->add_layer_dependency(point_layer_name, scatter_layer_settings->get_debug_name(), Vector2i());
@@ -194,7 +194,7 @@ Ref<ChunkinatorChunk> ChunkinatorTestLayer::instantiate_chunk() {
 }
 
 void ChunkinatorTestChunk::test() {
-    
+
 }
 
 void ChunkinatorTestChunk::generate() {

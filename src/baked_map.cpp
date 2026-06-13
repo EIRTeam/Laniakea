@@ -1,24 +1,24 @@
 #include "baked_map.h"
 
 void BakedMap::from_image(Ref<Image> p_image) {
-    dimensions = p_image->get_size();
-    data.resize(dimensions.x*dimensions.y);
+	dimensions = p_image->get_size();
+	data.resize(dimensions.x * dimensions.y);
 
-    float *data_w = data.ptrw();
+	float *data_w = data.ptrw();
 
-    for (int x = 0; x < dimensions.x; x++) {
-        for (int y = 0; y < dimensions.y; y++) {
-            data_w[x + y * dimensions.x] = p_image->get_pixel(x, y).r;
-        }
-    }
+	for (int x = 0; x < dimensions.x; x++) {
+		for (int y = 0; y < dimensions.y; y++) {
+			data_w[x + y * dimensions.x] = p_image->get_pixel(x, y).r;
+		}
+	}
 }
 
 float BakedMap::sample_point(Vector2i p_point) const {
-    return data[p_point.x + p_point.y * dimensions.x];
+	return data[p_point.x + p_point.y * dimensions.x];
 }
 
 float BakedMap::bilinearly_sample(Vector2 p_uv) const {
-    DEV_ASSERT(p_uv.x >= 0.0);
+	DEV_ASSERT(p_uv.x >= 0.0);
 
 	// Convert to heightmap pixel coordinates
 	double u = p_uv.x * (dimensions.x - 1);

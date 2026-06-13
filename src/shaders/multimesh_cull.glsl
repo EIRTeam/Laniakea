@@ -70,9 +70,9 @@ void main() {
         atomicExchange(indirect.commands[0].instance_count, 0);
         //atomicExchange(mesh_config.culled_instances_count, 0);
     }
-    
+
     barrier();
-    
+
     if (!cull_data.data.lod_pass) {
         if ( && !IsVisible(gl_GlobalInvocationID.x)) {
             return;
@@ -80,7 +80,7 @@ void main() {
     }
 
     int idx = atomicAdd(indirect.commands[0].instance_count, 1);
-     
+
     int stride = mesh_config.config.transform_stride;
     for (int i = 0; i < 12; i++) {
         output_transforms.transforms[idx * stride + i] = input_transforms.transforms[gl_GlobalInvocationID.x * stride + i];

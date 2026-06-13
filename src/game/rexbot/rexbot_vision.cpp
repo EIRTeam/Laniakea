@@ -60,7 +60,7 @@ bool RexbotVision::_try_lookat(const LookAtTarget &p_target)
         String target_name_string;
         switch (look_at_target->target_type) {
 			case LookAtTarget::POSITION: {
-                target_name_string = vformat("position %s", look_at_target->tracked_position);                
+                target_name_string = vformat("position %s", look_at_target->tracked_position);
             } break;
 			case LookAtTarget::ACTOR: {
                 target_name_string = vformat("actor %s", look_at_target->actor->get_path());
@@ -125,7 +125,7 @@ void RexbotVision::update(double p_delta) {
 
         BaseCharacter *character = Object::cast_to<BaseCharacter>(ObjectDB::get_instance(known_actor.actor_object));
         bool was_visible = known_actor.visible;
-        
+
         if (!was_visible && visible_characters.has(character)) {
             known_actor.visible = true;
             known_actor.became_visible_time = LaniakeaMainLoop::get_singleton()->get_physics_time();
@@ -143,7 +143,7 @@ void RexbotVision::update(double p_delta) {
     // Add newly sighted entities
     for (BaseCharacter *character : visible_characters) {
         const ObjectID instance_id = ObjectID(character->get_instance_id());
-        
+
         int j;
         for (j = 0; j < known_actors.size(); j++) {
             if (known_actors[j].actor_object == instance_id) {
@@ -173,7 +173,7 @@ void RexbotVision::update(double p_delta) {
             look_at_target = std::nullopt;
         } else if (look_at_target->target_type == LookAtTarget::LookAtTargetType::ACTOR && aim_interval_timer.is_greater_than(get_entity_tracking_update_interval())) {
             // When tracking NPCs we have a custom tracking interval
-            look_at_target->tracked_position = look_at_target->actor->get_model()->get_eye_position();        
+            look_at_target->tracked_position = look_at_target->actor->get_model()->get_eye_position();
             aim_interval_timer.reset();
         }
     }
@@ -204,7 +204,7 @@ int RexbotVision::get_primary_threat_idx() const {
             return i;
         }
     }
-    
+
     return -1;
 }
 

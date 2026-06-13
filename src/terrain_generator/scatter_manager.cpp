@@ -24,7 +24,7 @@ void ScatterManager::spawn_chunk(const Vector2i &p_chunk) {
         Ref<TerrainScattererElementSettings> element_settings = all_element_settings[element_i];
 
         std::vector<Ref<TerrainScattererLODMesh>> meshes;
-        
+
         for (int mesh_i = 0; mesh_i < element_settings->get_mesh_count(); mesh_i++) {
             meshes.push_back(element_settings->get_mesh(mesh_i));
             print_line("BEGIN", meshes[mesh_i]->get_mesh()->get_path());
@@ -42,7 +42,7 @@ void ScatterManager::spawn_chunk(const Vector2i &p_chunk) {
 
         chunk_data.element_instances.push_back({
             .multimesh = mm,
-            .sorted_lod_meshes = meshes  
+            .sorted_lod_meshes = meshes
         });
     }
 

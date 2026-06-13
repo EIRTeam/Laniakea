@@ -66,7 +66,7 @@ int run_lod_selection() {
     }
 
     int trf_stride = mesh_config.config.transform_stride;
-    
+
     vec3 mesh_position = vec3(
         input_transforms.transforms[gl_GlobalInvocationID.x * trf_stride + 3],
         input_transforms.transforms[gl_GlobalInvocationID.x * trf_stride + 7],
@@ -74,7 +74,7 @@ int run_lod_selection() {
     );
 
     vec3 camera_pos = cull_data.data.camera_position.xyz;
-    
+
     float distance_to_camera = distance(mesh_position, camera_pos);
 
     int lod = 0;
@@ -131,7 +131,7 @@ void main() {
     if (gl_GlobalInvocationID.x < mesh_config.config.lod_count) {
         int batch_idx = atomicAdd(last_transform_batch_idx, lod_configs.configs[gl_GlobalInvocationID.x].instance_count);
         lod_configs.configs[gl_GlobalInvocationID.x].current_index = batch_idx;
-        
+
         int surface_count = lod_configs.configs[gl_GlobalInvocationID.x].instance_count;
         for (int i = 0; i < lod_configs.configs[gl_GlobalInvocationID.x].surface_count; i++) {
             int surf = lod_configs.configs[gl_GlobalInvocationID.x].surfaces[i];

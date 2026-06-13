@@ -88,7 +88,7 @@ void BaseMovement::update(float p_delta) {
     if constexpr (Debug::is_debug_enabled) {
         constexpr int PATH_PREDICTION_STEPS = 16;
         constexpr float PATH_PREDICTION_TIME = 3.0f;
-        
+
         PackedVector3Array predicted_path = desired_velocity_spring.predict(owner_node->get_global_position(), get_desired_velocity(), PATH_PREDICTION_TIME, PATH_PREDICTION_STEPS);
         DebugOverlay::path( predicted_path, true, Color::named("green"));
     }
@@ -100,7 +100,7 @@ void BaseMovement::_handle_collision(const Vector3 &p_velocity, const Ref<Physic
 
     for (int i = 0; i < p_collision_result->get_collision_count(); i++) {
         RID other_body_rid = p_collision_result->get_collider_rid(i);
-        const bool is_rigidbody = ps->body_get_mode(other_body_rid) == PhysicsServer3D::BODY_MODE_RIGID || ps->body_get_mode(other_body_rid) == PhysicsServer3D::BODY_MODE_RIGID_LINEAR; 
+        const bool is_rigidbody = ps->body_get_mode(other_body_rid) == PhysicsServer3D::BODY_MODE_RIGID || ps->body_get_mode(other_body_rid) == PhysicsServer3D::BODY_MODE_RIGID_LINEAR;
         if (!is_rigidbody) {
             continue;
         }
@@ -157,7 +157,7 @@ void BaseMovement::_try_snap_up_stair(const Vector3 &p_movement_dir, const Trans
     stair_up_collision.instantiate();
     const float MAX_STEP_HEIGHT = movement_settings->get_max_step_height();
     const float MING_STEP_DEPTH = movement_settings->get_min_step_depth();
-    
+
     // Try casting up
     stair_up_collision.instantiate();
 

@@ -5,7 +5,7 @@ import sys
 from methods import print_error
 import methods
 import glsl_builders
-from SCons.Variables import BoolVariable, EnumVariable, PathVariable
+from SCons.Variables import PathVariable
 
 libname = "chunkinator"
 
@@ -68,10 +68,10 @@ sources += Glob("src/game/*.cpp")
 sources += Glob("src/debug/*.cpp")
 sources += Glob("src/animation/*.cpp")
 sources += Glob("src/game/ui/*.cpp")
-sources += Glob("src/game/vehicle/*.cpp")
+sources += Glob("src/vehicle/*.cpp")
 sources += Glob("src/game/turret/*.cpp")
 sources += Glob("src/game/rexbot/*.cpp")
-sources.append("/mnt/wwn-0x50026b7782b0ee9e-part1/porter/tracy/public/TracyClient.cpp")
+sources.append("/mnt/data_drive/porter/tracy/public/TracyClient.cpp")
 
 env.Append(BUILDERS=GLSL_BUILDERS)
 
@@ -87,10 +87,14 @@ if "RD_GLSL" in env["BUILDERS"]:
     gl_include_files = [str(f) for f in Glob("src/shaders/*_inc.glsl")]
 
     # find all shader code (all glsl files excluding our include files)
-    glsl_files = [str(f) for f in Glob("src/shaders/*.glsl") if str(f) not in gl_include_files]
+    glsl_files = [
+        str(f) for f in Glob("src/shaders/*.glsl") if str(f) not in gl_include_files
+    ]
 
     # make sure we recompile shaders if include files change
-    env.Depends([f + ".gen.h" for f in glsl_files], gl_include_files + ["#glsl_builders.py"])
+    env.Depends(
+        [f + ".gen.h" for f in glsl_files], gl_include_files + ["#glsl_builders.py"]
+    )
 
     # compile include files
     for glsl_file in gl_include_files:
@@ -99,24 +103,29 @@ if "RD_GLSL" in env["BUILDERS"]:
     # compile RD shader
     for glsl_file in glsl_files:
         import os
+
         print("TRYBUILD", os.path.isfile(glsl_file))
         env.RD_GLSL(glsl_file)
 
 if env["target"] in ["editor", "template_debug"]:
     try:
-        doc_data = env.GodotCPPDocData("src/gen/doc_data.gen.cpp", source=Glob("doc_classes/*.xml"))
+        doc_data = env.GodotCPPDocData(
+            "src/gen/doc_data.gen.cpp", source=Glob("doc_classes/*.xml")
+        )
         sources.append(doc_data)
     except AttributeError:
         print("Not including class reference as we're targeting a pre-4.3 baseline.")
 
 # .dev doesn't inhibit compatibility, so we don't need to key it.
 # .universal just means "compatible with all relevant arches" so we don't need to key it.
-suffix = env['suffix'].replace(".dev", "").replace(".universal", "")
+suffix = env["suffix"].replace(".dev", "").replace(".universal", "")
 
-lib_filename = "{}{}{}{}".format(env.subst('$SHLIBPREFIX'), libname, suffix, env.subst('$SHLIBSUFFIX'))
+lib_filename = "{}{}{}{}".format(
+    env.subst("$SHLIBPREFIX"), libname, suffix, env.subst("$SHLIBSUFFIX")
+)
 
 library = env.SharedLibrary(
-    "bin/{}/{}".format(env['platform'], lib_filename),
+    "bin/{}/{}".format(env["platform"], lib_filename),
     source=sources,
 )
 
@@ -126,7 +135,7 @@ else:
     env.Append(CXXFLAGS=["-std=c++20"])
 
 env.Append(CPPDEFINES=["TRACY_ENABLE"])
-env.Append(CPPPATH=["/mnt/wwn-0x50026b7782b0ee9e-part1/porter/tracy/public"])
+env.Append(CPPPATH=["/mnt/data_drive/porter/tracy/public"])
 
 if projectdir != None:
     copy = env.Install("{}/bin/{}/".format(projectdir, env["platform"]), library)

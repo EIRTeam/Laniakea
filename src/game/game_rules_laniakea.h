@@ -7,7 +7,7 @@ class LaniakeaGameRules : public GameRules {
 public:
     enum AmmoTypes {
         RIFLE_AMMO_TYPE,
-        AMMO_TYPE_MAX 
+        AMMO_TYPE_MAX
     };
 private:
     // Rifle ammo

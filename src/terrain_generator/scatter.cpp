@@ -21,7 +21,7 @@ Ref<ChunkinatorChunk> ScatterLayer::instantiate_chunk() {
 }
 
 Ref<TerrainScatterLayerSettings> ScatterLayer::get_layer_settings() const {
-    return layer_settings;    
+    return layer_settings;
 }
 
 void ScatterChunk::generate() {
@@ -56,7 +56,7 @@ void ScatterChunk::generate() {
         }
 
         const int element_idx = rng->rand_weighted(element_probabilities);
-        
+
         Transform3D element_trf;
         const float height = heightmap_layer->sample_noise(points[i]);
         element_trf.origin = Vector3(points[i].x, height, points[i].y);

@@ -48,7 +48,7 @@ void SegmentQuadtree::_insert_child_segments(const int p_node_idx, const LocalVe
 
     node.indices_begin = node_segment_indices.size();
     node.indices_count = intersecting_segments_idx.size();
-    
+
     node_segment_indices.resize(node_segment_indices.size() + intersecting_segments_idx.size());
 
     for (int i = 0; i < intersecting_segments_idx.size(); i++) {
@@ -97,7 +97,7 @@ int SegmentQuadtree::find_closest_segment(const Vector2 &p_world_point, std::opt
     FuncProfile;
 
     const float max_radius_squared = p_max_radius.has_value() ? *p_max_radius * *p_max_radius : std::numeric_limits<float>::max();
-    
+
     if (!tree_world_rect.has_point(p_world_point)) {
         return -1;
     }
@@ -122,13 +122,13 @@ int SegmentQuadtree::find_closest_segment(const Vector2 &p_world_point, std::opt
 
     HashSet<int> visited_nodes;
     HashSet<int> visited_segments;
-    
+
     while (!node_queue.empty()) {
         int current_node =  node_queue.top();
         node_queue.pop();
 
         const QuadTreeNode &node = nodes[current_node];
-        
+
         // We are a leaf!
         if (node.children_begin == -1 && node.indices_begin != -1) {
             for (int i = 0; i < node.indices_count; i++) {
@@ -147,7 +147,7 @@ int SegmentQuadtree::find_closest_segment(const Vector2 &p_world_point, std::opt
                 visited_segments.insert(segment_idx);
             }
         }
-        
+
         if (visited_nodes.has(current_node)) {
             continue;
         }
@@ -182,7 +182,7 @@ int SegmentQuadtree::find_closest_segment(const Vector2 &p_world_point, std::opt
         if (r_distance !=  nullptr) {
             *r_distance = Math::sqrt(closest_segment_distance_squared);
         }
-        
+
         if (r_closest_point != nullptr) {
             *r_closest_point = closest_segment_point;
         }
@@ -208,7 +208,7 @@ Transform2D SegmentQuadTreeDebug::get_draw_trf() const {
 }
 
 void SegmentQuadTreeDebug::_bind_methods() {
-    
+
 }
 
 SegmentQuadTreeDebug::SegmentQuadTreeDebug() {
@@ -217,7 +217,7 @@ SegmentQuadTreeDebug::SegmentQuadTreeDebug() {
     Ref<RandomNumberGenerator> rng;
     rng.instantiate();
     rng->set_seed(123123);
-    
+
     const int TEST_RECT_SIZE = 4096;
 
     for (int i = 0; i < 16; i++) {

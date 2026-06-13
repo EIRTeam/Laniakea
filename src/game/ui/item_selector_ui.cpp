@@ -55,11 +55,11 @@ void ItemSelectorUI::_regenerate_fan_mesh() {
             vtx_array_ptrw[i].z
         );
 
-        
+
         float vtx_angle_perc = Math::abs(new_vertex.y * 2.0f);
         vtx_angle_perc = Math::sqrt(vtx_angle_perc);
         vtx_angle_perc *= SIGN(new_vertex.y);
-        
+
         const Vector2 vtx_2d = Vector2(new_vertex.x, 0.0f).rotated(vtx_angle_perc * rads_per_child);
         vtx_array_ptrw[i] = Vector3(vtx_2d.x, vtx_2d.y, 0.0f);
     }
@@ -104,7 +104,7 @@ void ItemSelectorUI::_update_hovered_item() {
     fan_mesh_instance->rotate(mouse_rot);
     int idx = Math::floor((mouse_rot + fan_mesh.rads_per_child * 0.5f) / fan_mesh.rads_per_child);
     idx = Math::wrapi(idx, 0, item_container->get_child_count());
-    
+
     if (idx == hovered_item) {
         return;
     }
@@ -114,7 +114,7 @@ void ItemSelectorUI::_update_hovered_item() {
     }
 
     hovered_item = idx;
-    
+
     const StringName item_name = showing_items[hovered_item].name;
     LaniakeaGameRules *game_rules = LaniakeaMainLoop::get_singleton()->get_game_rules();
     item_name_label->set_text(game_rules->item_get_localization_name(item_name));
@@ -226,6 +226,6 @@ void ItemSelectorUI::_input(const Ref<InputEvent> &p_event) {
             test.push_back("weapon_gravitygun_item");
             test.push_back("weapon_rifle_test_item");
             show_items(test, "weapon_gravitygun_item");
-        } 
+        }
     }
 }

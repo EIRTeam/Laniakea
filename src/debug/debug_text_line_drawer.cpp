@@ -5,7 +5,7 @@
 #include "godot_cpp/classes/font.hpp"
 void DebugTextLineDrawer::_bind_methods()
 {
-    
+
 }
 void DebugTextLineDrawer::_draw() {
     Camera3D *cam = get_viewport()->get_camera_3d();

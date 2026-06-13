@@ -5,6 +5,6 @@
 using namespace godot;
 
 class PlayerSpawnPoint : public Marker3D {
-    GDCLASS(PlayerSpawnPoint, Marker3D);
-    PlayerSpawnPoint();
+	GDCLASS(PlayerSpawnPoint, Marker3D);
+	PlayerSpawnPoint();
 };

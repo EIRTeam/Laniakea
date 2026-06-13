@@ -90,11 +90,11 @@ void TerrainChunkNode::_generate_collision_meshes_task(uint32_t p_idx) {
             const int top_right_idx = y * total_collision_mesh_resolution + x + 1;
             const int bottom_right_idx = (y + 1) * total_collision_mesh_resolution + x + 1;
             const int bottom_left_idx = (y + 1) * total_collision_mesh_resolution + x;
-            
+
             out_vertices[xid++] = vertices[top_left_idx];
             out_vertices[xid++] = vertices[top_right_idx];
             out_vertices[xid++] = vertices[bottom_left_idx];
-    
+
             out_vertices[xid++] = vertices[top_right_idx];
             out_vertices[xid++] = vertices[bottom_right_idx];
             out_vertices[xid++] = vertices[bottom_left_idx];
@@ -130,7 +130,7 @@ void TerrainChunkNode::_check_quadtree_generation() {
         _update_chunk_lod_masks();
         return;
     }
-    
+
     status = UpdateStatus::GENERATING_COLLISION_MESH;
 
     // We need to generate collision meshes
@@ -157,18 +157,18 @@ void TerrainChunkNode::_check_collision_mesh_generation() {
         it.value.mesh_instance->set_mesh(plane_mesh);
         material->set_shader_parameter("heightmap", heightmap_texture);
         material->set_shader_parameter("road_sdf", road_sdf_texture);
-        
+
         Vector2 origin = Vector2(it.key.position) / Vector2(world_rect.size);
         Vector2 end = Vector2(it.key.position + it.key.size) / Vector2(world_rect.size);
-        
+
         it.value.mesh_instance->set_instance_shader_parameter("side_size", it.key.size.x);
         it.value.mesh_instance->set_instance_shader_parameter("lod_depth", it.value.lod_depth);
         AABB aabb;
         aabb.set_position(Vector3(0.0, -3000.0, 0.0));
         aabb.set_size(Vector3(it.key.size.x, 6000.0, it.key.size.y));
-        
+
         it.value.mesh_instance->set_custom_aabb(aabb);
-        
+
         it.value.status = ChunkStatus::DONE;
 
         it.value.collision_shape = memnew(CollisionShape3D);
@@ -272,4 +272,3 @@ TextureArrayQueue::TextureHandle TerrainChunkNode::get_heightmap_texture_handle(
 TerrainChunkNode::TerrainChunkNode()
 {
 }
-

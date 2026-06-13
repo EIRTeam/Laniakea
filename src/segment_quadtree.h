@@ -17,11 +17,11 @@ using namespace godot;
 class SegmentQuadTreeDebug;
 
 class SegmentQuadtree {
-    
+
     static constexpr int TREE_MAX_DEPTH = 4;
 
     Rect2 tree_world_rect;
-    
+
     enum NodePosition {
         POSITION_NW,
 		POSITION_NE,
@@ -29,7 +29,7 @@ class SegmentQuadtree {
 		POSITION_SE,
         POSITION_MAX
     };
-    
+
     struct QuadTreeNode {
         int children_begin = -1;
         int indices_begin = -1;
@@ -50,7 +50,7 @@ public:
         Vector2 end;
     };
 private:
-    
+
     LocalVector<QuadTreeNode> nodes;
     LocalVector<QuadTreeSegment> segments;
     LocalVector<int> node_segment_indices;

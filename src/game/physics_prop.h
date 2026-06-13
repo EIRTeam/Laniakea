@@ -5,7 +5,7 @@
 using namespace godot;
 
 class LaniakeaPhysicsProp : public RigidBody3D {
-    GDCLASS(LaniakeaPhysicsProp, RigidBody3D);
-    static void _bind_methods() {};
-    LaniakeaPhysicsProp();
+	GDCLASS(LaniakeaPhysicsProp, RigidBody3D);
+	static void _bind_methods() {}
+	LaniakeaPhysicsProp();
 };

@@ -4,7 +4,7 @@
 
 class NPCTurretAttackAction : public RexbotAction {
 public:
-    NPCTurretAttackAction(RexbotNPCBase *p_actor);
-    virtual const char *get_name() const override;
-    virtual RexbotActionResult update(real_t p_delta) override;
+	NPCTurretAttackAction(RexbotNPCBase *p_actor);
+	virtual const char *get_name() const override;
+	virtual RexbotActionResult update(real_t p_delta) override;
 };

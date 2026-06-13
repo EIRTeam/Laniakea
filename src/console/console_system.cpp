@@ -22,7 +22,7 @@ void ConsoleSystem::register_cvar(CVar* p_cvar) {
         return;
     }
     registered_cvars.insert(p_cvar->cvar_data->cvar_name, p_cvar);
-    
+
     Ref<CVarProxy> proxy;
     proxy.instantiate();
     cvar_proxies.insert(p_cvar->cvar_data->cvar_name, proxy);
@@ -170,7 +170,7 @@ void ConsoleSystem::execute_user_command(const String &p_command_line) {
 
     const int64_t first_space = command_line_stripped.find(" ");
     print_line("] " + command_line_stripped);
-    
+
     StringName cvar_name = command_line_stripped.substr(0, first_space);
 
     auto it = registered_cvars.find(cvar_name);
@@ -188,7 +188,7 @@ void ConsoleSystem::execute_user_command(const String &p_command_line) {
         if (!value.is_empty()) {
             const Variant original_value = cvar->cvar_data->current_value;
             Variant output_value = parse_string_variant(value, cvar->cvar_data->current_value.get_type());
-            
+
             if (output_value.get_type() == Variant::Type::NIL) {
                 print_error(vformat("Error parsing value\"%s\" for cvar \"%s\", expected a \"%s\"!", value, cvar->cvar_data->cvar_name_str, Variant::get_type_name(original_value.get_type())));
                 return;
@@ -266,7 +266,7 @@ void ConsoleSystem::_update_cvar_autosave(CVar *p_cvar) {
         cvar_config_file->save(CVAR_CONFIG_FILE_PATH);
         return;
     }
-    
+
     cvar_config_file->set_value(CVAR_SECTION_NAME, cvar_name, p_cvar->cvar_data->current_value);
     cvar_config_file->save(CVAR_CONFIG_FILE_PATH);
 }

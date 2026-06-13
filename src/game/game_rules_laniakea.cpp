@@ -32,4 +32,3 @@ void LaniakeaGameRules::initialize() {
     register_weapon<WeaponCounterShield>("weapon_counter_shield");
     GameRules::initialize();
 }
-

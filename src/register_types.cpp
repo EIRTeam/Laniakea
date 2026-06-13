@@ -1,11 +1,7 @@
 #include "register_types.h"
 
-#include <gdextension_interface.h>
-#include <godot_cpp/core/class_db.hpp>
-#include <godot_cpp/core/defs.hpp>
-#include <godot_cpp/godot.hpp>
-#include <godot_cpp/classes/engine.hpp>
-
+#include "animation/hip_rotator_modifier.h"
+#include "animation/inertialization_skeleton_modifier_polynomial.h"
 #include "chunkinator/chunk_spawner.h"
 #include "chunkinator/chunkinator_debug_snapshot_viewer.h"
 #include "chunkinator/chunkinator_debugger.h"
@@ -29,18 +25,19 @@
 #include "game/main_loop.h"
 #include "game/movement_settings.h"
 #include "game/physics_prop.h"
+#include "game/player_camera.h"
 #include "game/player_character.h"
 #include "game/protagonist_player_character.h"
 #include "game/rexbot/rexbot_configuration.h"
 #include "game/rexbot/rexbot_npc_base.h"
 #include "game/turret/npc_turret.h"
-#include "game/ui/radial_container.h"
-#include "game/ui/item_selector_ui.h"
 #include "game/ui/item_select_icon.h"
+#include "game/ui/item_selector_ui.h"
+#include "game/ui/radial_container.h"
 #include "game/weapon_counter_shield.h"
+#include "game/weapon_firearm.h"
 #include "game/weapon_gravitygun.h"
 #include "game/weapon_instance.h"
-#include "game/weapon_firearm.h"
 #include "game/weapon_model.h"
 #include "game/weapon_rifle_test.h"
 #include "godot_cpp/classes/editor_plugin_registration.hpp"
@@ -48,17 +45,15 @@
 #include "godot_cpp/classes/resource_importer.hpp"
 #include "godot_cpp/classes/scene_tree.hpp"
 #include "indirect_mesh.h"
-#include "animation/inertialization_skeleton_modifier_polynomial.h"
+#include "indirect_mesh_instance_3d.h"
 #include "quadtree.h"
 #include "segment_quadtree.h"
 #include "terrain_generator/terrain_heightmap_combine_layer.h"
 #include "terrain_generator/terrain_manager.h"
 #include "terrain_generator/terrain_settings.h"
-#include "indirect_mesh_instance_3d.h"
-#include "game/player_camera.h"
-#include "animation/hip_rotator_modifier.h"
 #include "vehicle/clutch.h"
 #include "vehicle/engine_sound_config.h"
+#include "vehicle/engine_sound_editor_plugin.h"
 #include "vehicle/engine_sound_import_plugin.h"
 #include "vehicle/shaft.h"
 #include "vehicle/suspension_test.h"
@@ -73,8 +68,13 @@
 #include "vehicle/vehicle_suspension_settings.h"
 #include "vehicle/vehicle_wheel.h"
 #include "vehicle/vehicle_wheel_settings.h"
-#include "vehicle/engine_sound_editor_plugin.h"
 #include "vehicle/vehicle_wheel_shaft.h"
+
+#include <gdextension_interface.h>
+#include <godot_cpp/classes/engine.hpp>
+#include <godot_cpp/core/class_db.hpp>
+#include <godot_cpp/core/defs.hpp>
+#include <godot_cpp/godot.hpp>
 
 using namespace godot;
 
@@ -84,8 +84,7 @@ void _editor_init() {
 	overlay->initialize(Object::cast_to<SceneTree>(main_loop));
 }
 
-void initialize_gdextension_types(ModuleInitializationLevel p_level)
-{
+void initialize_gdextension_types(ModuleInitializationLevel p_level) {
 	if (p_level == MODULE_INITIALIZATION_LEVEL_EDITOR) {
 		if (!Engine::get_singleton()->is_editor_hint()) {
 			return;
@@ -147,7 +146,7 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level)
 
 	GDREGISTER_CLASS(CharacterHitbox);
 	GDREGISTER_CLASS(CharacterHitboxDetector);
-	
+
 	GDREGISTER_CLASS(InertializationSkeletonModifierPolynomial);
 	GDREGISTER_CLASS(RexbotConfiguration);
 	GDREGISTER_ABSTRACT_CLASS(RexbotNPCBase);
@@ -185,16 +184,14 @@ void uninitialize_gdextension_types(ModuleInitializationLevel p_level) {
 	}
 }
 
-extern "C"
-{
-	// Initialization
-	GDExtensionBool GDE_EXPORT chunkinator_library_init(GDExtensionInterfaceGetProcAddress p_get_proc_address, GDExtensionClassLibraryPtr p_library, GDExtensionInitialization *r_initialization)
-	{
-		GDExtensionBinding::InitObject init_obj(p_get_proc_address, p_library, r_initialization);
-		init_obj.register_initializer(initialize_gdextension_types);
-		init_obj.register_terminator(uninitialize_gdextension_types);
-		init_obj.set_minimum_library_initialization_level(MODULE_INITIALIZATION_LEVEL_SCENE);
+extern "C" {
+// Initialization
+GDExtensionBool GDE_EXPORT chunkinator_library_init(GDExtensionInterfaceGetProcAddress p_get_proc_address, GDExtensionClassLibraryPtr p_library, GDExtensionInitialization *r_initialization) {
+	GDExtensionBinding::InitObject init_obj(p_get_proc_address, p_library, r_initialization);
+	init_obj.register_initializer(initialize_gdextension_types);
+	init_obj.register_terminator(uninitialize_gdextension_types);
+	init_obj.set_minimum_library_initialization_level(MODULE_INITIALIZATION_LEVEL_SCENE);
 
-		return init_obj.init();
-	}
+	return init_obj.init();
+}
 }

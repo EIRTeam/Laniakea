@@ -44,7 +44,7 @@ private:
     };
 
     static constexpr int DELAYED_INIT_CVAR_MAX = 64;
-    
+
     static std::vector<DelayedInitData> &get_delayed_init_arr();
 
     struct CVarData {
@@ -66,7 +66,7 @@ private:
 
     void _delayed_init(const DelayedInitData &p_delayed_init);
     String _get_value_display_string(const Variant &p_variant) const;
-    
+
     CVar(const DelayedInitData &p_delayed_init);
 
 public:
@@ -74,9 +74,9 @@ public:
     CVar(const CVar &&p_other) = delete;
     CVar &operator=(const CVar &p_other) = delete;
     CVar &operator=(CVar &&p_other) = delete;
-    
+
     ~CVar();
-    
+
     static CVar create_variable(const char *p_name, int p_type, DefaultValueRaw p_default, const char *p_description, int p_property_hint = PROPERTY_HINT_NONE, const char *p_property_hint_text = "");
     static CVar create_command(const char *p_name, const char *p_description, std::initializer_list<DelayedPropertyInfo> p_command_arguments = {});
 
