@@ -10,8 +10,10 @@
 #include <functional>
 
 float LNVehicleEngine::compute_crossfade_t(float p_value,
-		float p_lower_min, float p_lower_max,
-		float p_upper_min, float p_upper_max,
+		float p_lower_min,
+		float p_lower_max,
+		float p_upper_min,
+		float p_upper_max,
 		float p_n) {
 	float xfade_start = p_lower_max - p_n * (p_lower_max - p_lower_min);
 	float xfade_end = p_upper_min + p_n * (p_upper_max - p_upper_min);
@@ -55,7 +57,8 @@ void LNVehicleEngine::update_output_torque(float p_throttle, double p_delta) {
 											idle_rpm + (engine_settings->get_rpm_limit() - idle_rpm) * active_idle_range,
 											idle_rpm,
 											current_rpm),
-				0.0f, 1.0f);
+				0.0f,
+				1.0f);
 		final_throttle = Math::lerp(idle_throttle * idle_fade_rpm, 1.0f, remapped_throttle);
 	}
 

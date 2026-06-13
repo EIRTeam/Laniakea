@@ -67,6 +67,8 @@ AttributeMacros:
   - _NO_INLINE_
 # BinPackArguments: true
 # BinPackParameters: true
+BinPackArguments: false
+BinPackParameters: false
 # BitFieldColonSpacing: Both
 # BraceWrapping:
 #   AfterCaseLabel: false
@@ -104,7 +106,6 @@ ColumnLimit: 0
 # CompactNamespaces: false
 ConstructorInitializerIndentWidth: 8
 ContinuationIndentWidth: 8
-Cpp11BracedListStyle: false
 # DerivePointerAlignment: false
 # DisableFormat: false
 # EmptyLineAfterAccessModifier: Never
@@ -168,6 +169,7 @@ JavaImportGroups:
 # JavaScriptQuotes: Leave
 # JavaScriptWrapImports: true
 # KeepEmptyLinesAtEOF: false
+Cpp11BracedListStyle: false
 KeepEmptyLinesAtTheStartOfBlocks: false
 # LambdaBodyIndentation: Signature
 # Language: Cpp
@@ -216,6 +218,7 @@ RemoveSemicolon: true
 # SpaceBeforeAssignmentOperators: true
 # SpaceBeforeCaseColon: false
 SpaceBeforeCpp11BracedList: true
+BreakAfterOpenBracketBracedList: false
 # SpaceBeforeCtorInitializerColon: true
 # SpaceBeforeInheritanceColon: true
 # SpaceBeforeJsonColon: false

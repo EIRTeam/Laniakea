@@ -38,8 +38,10 @@ class VehicleEngineSound {
 	void update_audio_sample(std::optional<SoundPlaybackSample> &r_sample, int p_map_idx, int p_sample_idx);
 
 	float compute_crossfade_t(float p_value,
-			float lower_min, float lower_max,
-			float upper_min, float upper_max,
+			float lower_min,
+			float lower_max,
+			float upper_min,
+			float upper_max,
 			float n);
 
 public:

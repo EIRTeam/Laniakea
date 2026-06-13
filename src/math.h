@@ -88,8 +88,7 @@ static _FORCE_INLINE_ float fast_negexp(float x) {
 	return 1.0f / (1.0f + x + 0.48f * x * x + 0.235f * x * x * x);
 }
 
-static _FORCE_INLINE_ int32_t circle_intersect(const Vector2 &p_center_0, const float p_radius_0, const Vector2 &p_center_1, const float p_radius_1,
-		Vector2 &r_out0, Vector2 &r_out1, const float p_eps = 0.001f) {
+static _FORCE_INLINE_ int32_t circle_intersect(const Vector2 &p_center_0, const float p_radius_0, const Vector2 &p_center_1, const float p_radius_1, Vector2 &r_out0, Vector2 &r_out1, const float p_eps = 0.001f) {
 	// -------------------------------------------------------------------------
 	// Robust circle-circle intersection (2D)
 	// -------------------------------------------------------------------------
@@ -156,9 +155,12 @@ static _FORCE_INLINE_ int32_t circle_intersect(const Vector2 &p_center_0, const 
 }
 
 static _FORCE_INLINE_ int circle_intersect_2d(
-		const Vector2 &p_center_a, float p_radius_a,
-		const Vector2 &p_center_b, float p_radius_b,
-		Vector2 &r_p0, Vector2 &r_p1,
+		const Vector2 &p_center_a,
+		float p_radius_a,
+		const Vector2 &p_center_b,
+		float p_radius_b,
+		Vector2 &r_p0,
+		Vector2 &r_p1,
 		float p_eps = 1e-6f) {
 	const Vector2 delta = p_center_b - p_center_a;
 	const float dist = delta.length();

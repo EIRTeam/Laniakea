@@ -138,7 +138,9 @@ bool LNVehicleMacPhersonSuspensionSettings::solve_ball_joint_location(const Vect
 	// Their intersection(s) define possible ball joint locations in the mechanism plane.
 	const Vector2 suspension_origin_2d = Vector2();
 	const Vector2 upper_shock_mount_2d = LNMath::to_plane_2d(p_upper_shock_mount_world,
-			p_pivot_axis_proj, p_pivot_axis_right, p_pivot_axis_up);
+			p_pivot_axis_proj,
+			p_pivot_axis_right,
+			p_pivot_axis_up);
 
 	Vector2 intersection_a_2d;
 	Vector2 intersection_b_2d;
@@ -160,13 +162,17 @@ bool LNVehicleMacPhersonSuspensionSettings::solve_ball_joint_location(const Vect
 		const Vector2 chosen_2d = (outboard_1 <= outboard_2) ? intersection_a_2d : intersection_b_2d;
 
 		p_r_out_intersection = LNMath::from_plane_2d(chosen_2d,
-				p_pivot_axis_proj, p_pivot_axis_right, p_pivot_axis_up);
+				p_pivot_axis_proj,
+				p_pivot_axis_right,
+				p_pivot_axis_up);
 		return true;
 	}
 	if (intersection_count == 1) {
 		// Tangent case: a single intersection (mechanism at boundary of feasibility).
 		p_r_out_intersection = LNMath::from_plane_2d(intersection_a_2d,
-				p_pivot_axis_proj, p_pivot_axis_right, p_pivot_axis_up);
+				p_pivot_axis_proj,
+				p_pivot_axis_right,
+				p_pivot_axis_up);
 		return true;
 	}
 

@@ -226,10 +226,8 @@ void LNVehicleWheelShaft::apply_arb(LNVehicle *p_vehicle, Ref<LNVehicleWheelShaf
 	const float arb_torque = p_arb_stiffness * ((-suspension_state.compression) - (-p_other_wheel->suspension_state.compression));
 
 	// Use contact normals, consistent with spring force
-	LNPhysics::apply_force(p_vehicle, -suspension_state.contact_normal * arb_torque,
-			suspension_state.ground_hit_position - p_vehicle->get_global_position(), Color(1.0, 0.0, 0.0));
-	LNPhysics::apply_force(p_vehicle, p_other_wheel->suspension_state.contact_normal * arb_torque,
-			p_other_wheel->suspension_state.ground_hit_position - p_vehicle->get_global_position(), Color(1.0, 0.0, 0.0));
+	LNPhysics::apply_force(p_vehicle, -suspension_state.contact_normal * arb_torque, suspension_state.ground_hit_position - p_vehicle->get_global_position(), Color(1.0, 0.0, 0.0));
+	LNPhysics::apply_force(p_vehicle, p_other_wheel->suspension_state.contact_normal * arb_torque, p_other_wheel->suspension_state.ground_hit_position - p_vehicle->get_global_position(), Color(1.0, 0.0, 0.0));
 }
 
 LNVehicleShaft::UpstreamData LNVehicleWheelShaft::get_upstream_data() {

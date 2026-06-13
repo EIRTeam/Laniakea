@@ -104,8 +104,10 @@ void VehicleEngineSound::set_sound_config(const Ref<LNEngineSoundConfiguration> 
 }
 
 float VehicleEngineSound::compute_crossfade_t(float p_value,
-		float p_lower_min, float p_lower_max,
-		float p_upper_min, float p_upper_max,
+		float p_lower_min,
+		float p_lower_max,
+		float p_upper_min,
+		float p_upper_max,
 		float p_n) {
 	float xfade_start = p_lower_max - p_n * (p_lower_max - p_lower_min);
 	float xfade_end = p_upper_min + p_n * (p_upper_max - p_upper_min);

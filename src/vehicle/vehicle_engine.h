@@ -23,8 +23,10 @@ class LNVehicleEngine : public LNVehicleShaft {
 	VehicleEngineSound sound;
 
 	float compute_crossfade_t(float p_value,
-			float lower_min, float lower_max,
-			float upper_min, float upper_max,
+			float lower_min,
+			float lower_max,
+			float upper_min,
+			float upper_max,
 			float n);
 
 	float clutch_reaction_torque = 0.0f;

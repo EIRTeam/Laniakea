@@ -163,7 +163,8 @@ void LNVehicle::_physics_process(double p_delta) {
 	const LNVehicleSteeringRack::SteeringRackResult steering_rack_result = LNVehicleSteeringRack::solve(
 			vehicle_settings,
 			{ wheels[WHEEL_FL].wheel->get_suspension_settings(), wheels[WHEEL_FR].wheel->get_suspension_settings() },
-			{ suspension_trf_left, suspension_trf_right }, input_state.steer);
+			{ suspension_trf_left, suspension_trf_right },
+			input_state.steer);
 	for (const WheelData &wheel_data : wheels) {
 		Vector3 rack_pos = wheel_data.wheel->get_wheel_position() == WHEEL_FL ? steering_rack_result.left_position : steering_rack_result.right_position;
 		wheel_data.shaft->wheel_pre_update(p_delta, rack_pos, input_state, this, wheel_data.wheel);
