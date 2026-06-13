@@ -1,4 +1,5 @@
 #include "base_character.h"
+
 #include "debug/debug_overlay.h"
 #include "game/biped_animation_base.h"
 #include "game/bullet_trail.h"
@@ -8,9 +9,10 @@
 #include "game/main_loop.h"
 #include "game/movement_settings.h"
 #include "game/weapon_firearm.h"
+#include "game/weapon_instance.h"
 #include "game/weapon_model.h"
-#include "godot_cpp/classes/node.hpp"
 #include "godot_cpp/classes/engine.hpp"
+#include "godot_cpp/classes/node.hpp"
 #include "godot_cpp/classes/physics_direct_space_state3d.hpp"
 #include "godot_cpp/classes/physics_ray_query_parameters3d.hpp"
 #include "godot_cpp/classes/physics_server3d.hpp"
@@ -19,353 +21,350 @@
 #include "godot_cpp/classes/world3d.hpp"
 #include "godot_cpp/core/print_string.hpp"
 #include "physics_layers.h"
-#include "game/weapon_instance.h"
 
 void BaseCharacter::_bind_methods() {
-    MAKE_BIND_NODE(BaseCharacter, model, CharacterModel);
-    ADD_SIGNAL(MethodInfo("died", PropertyInfo(Variant::VECTOR3, "last_hit_normal")));
-    
+	MAKE_BIND_NODE(BaseCharacter, model, CharacterModel);
+	ADD_SIGNAL(MethodInfo("died", PropertyInfo(Variant::VECTOR3, "last_hit_normal")));
 }
 
 void BaseCharacter::notify_dead(const Vector3 &p_last_hit_normal) {
-    character_state.dead = true;
-    emit_signal("died", p_last_hit_normal);
-    model->notify_died(p_last_hit_normal);
-    queue_free();
+	character_state.dead = true;
+	emit_signal("died", p_last_hit_normal);
+	model->notify_died(p_last_hit_normal);
+	queue_free();
 }
 
-void BaseCharacter::_hit_received(const CharacterHitbox::HitboxGroup p_hitbox_group, const Vector3 &p_position, const Vector3 &p_normal, int p_ammo_type, float p_damage){
-    apply_damage(p_damage, p_normal);
+void BaseCharacter::_hit_received(const CharacterHitbox::HitboxGroup p_hitbox_group, const Vector3 &p_position, const Vector3 &p_normal, int p_ammo_type, float p_damage) {
+	apply_damage(p_damage, p_normal);
 }
 
 Movement::MovementSpeed BaseCharacter::get_desired_movement_speed() const {
-    static StringName move_sprint = "sprint";
+	static StringName move_sprint = "sprint";
 
-    const Vector2 movement_vector = get_movement_vector();
-    const float movement_vector_length = movement_vector.length();
-    if (is_action_pressed(InputCommand::SPRINT)) {
-        return movement_vector_length > 0.0f ? Movement::MovementSpeed::SPRINTING : Movement::MovementSpeed::IDLING;
-    }
+	const Vector2 movement_vector = get_movement_vector();
+	const float movement_vector_length = movement_vector.length();
+	if (is_action_pressed(InputCommand::SPRINT)) {
+		return movement_vector_length > 0.0f ? Movement::MovementSpeed::SPRINTING : Movement::MovementSpeed::IDLING;
+	}
 
-    if (movement_vector_length > 0.5f) {
-        return Movement::MovementSpeed::RUNNING;
-    }
-    if (movement_vector_length > 0.0f) {
-        return Movement::MovementSpeed::WALKING;
-    }
+	if (movement_vector_length > 0.5f) {
+		return Movement::MovementSpeed::RUNNING;
+	}
+	if (movement_vector_length > 0.0f) {
+		return Movement::MovementSpeed::WALKING;
+	}
 
-    return Movement::MovementSpeed::IDLING;
+	return Movement::MovementSpeed::IDLING;
 }
 
 bool BaseCharacter::is_action_pressed(InputCommand p_command) const {
-    return get_action_state(p_command).has_flag(InputActionState::PRESSED);
+	return get_action_state(p_command).has_flag(InputActionState::PRESSED);
 }
 
 bool BaseCharacter::is_action_just_pressed(InputCommand p_command) const {
-    return get_action_state(p_command).has_flag(InputActionState::JUST_PRESSED);
+	return get_action_state(p_command).has_flag(InputActionState::JUST_PRESSED);
 }
 
 bool BaseCharacter::is_action_just_released(InputCommand p_command) const {
-    return get_action_state(p_command).has_flag(InputActionState::JUST_RELEASED);
+	return get_action_state(p_command).has_flag(InputActionState::JUST_RELEASED);
 }
 
 void BaseCharacter::get_aim_trajectory(int p_wapon_slot, Vector3 &r_origin, Vector3 &r_direction) {
-    r_origin = Vector3();
-    r_direction = Vector3();
+	r_origin = Vector3();
+	r_direction = Vector3();
 }
 
 void BaseCharacter::fire_bullet(const Vector3 &p_origin, const Vector3 &p_direction, float p_distance, int p_ammo_type, float p_damage, bool p_fire_visual_from_origin) {
-    //DebugOverlay::line(p_origin, p_origin + p_direction * p_distance, Color(1.0, 0.0, 0.0), false, 5.0f);
-    Ref<PhysicsRayQueryParameters3D> params;
-    params.instantiate();
-    params->set_from(p_origin);
-    params->set_to(p_origin + p_direction * p_distance);
-    params->set_collision_mask(PhysicsLayers::LAYER_WORLDSPAWN | PhysicsLayers::LAYER_ENTITY_HITBOXES);
-    params->set_exclude(attack_collision_exceptions);
+	//DebugOverlay::line(p_origin, p_origin + p_direction * p_distance, Color(1.0, 0.0, 0.0), false, 5.0f);
+	Ref<PhysicsRayQueryParameters3D> params;
+	params.instantiate();
+	params->set_from(p_origin);
+	params->set_to(p_origin + p_direction * p_distance);
+	params->set_collision_mask(PhysicsLayers::LAYER_WORLDSPAWN | PhysicsLayers::LAYER_ENTITY_HITBOXES);
+	params->set_exclude(attack_collision_exceptions);
 
-    PhysicsDirectSpaceState3D *dss = get_world_3d()->get_direct_space_state();
-    Dictionary result = dss->intersect_ray(params);
+	PhysicsDirectSpaceState3D *dss = get_world_3d()->get_direct_space_state();
+	Dictionary result = dss->intersect_ray(params);
 
-    const Vector3 firing_end = result.is_empty() ? params->get_to() : Vector3(result["position"]);
+	const Vector3 firing_end = result.is_empty() ? params->get_to() : Vector3(result["position"]);
 
-    DebugOverlay::sphere(firing_end, 0.25f, Color(1.0f, 0.0f, 0.0f));
+	DebugOverlay::sphere(firing_end, 0.25f, Color(1.0f, 0.0f, 0.0f));
 
-    if (!result.is_empty()) {
-        Node *n = Object::cast_to<Node>(result["collider"]);
-        if (n != nullptr) {
-            DebugOverlay::text(result["position"], vformat("%s", n->get_name()), Color(0.0, 1.0, 0.0), true, 2.0f);
-        }
-    } else {
-        print_line("Hit... nothing");
-    }
+	if (!result.is_empty()) {
+		Node *n = Object::cast_to<Node>(result["collider"]);
+		if (n != nullptr) {
+			DebugOverlay::text(result["position"], vformat("%s", n->get_name()), Color(0.0, 1.0, 0.0), true, 2.0f);
+		}
+	} else {
+		print_line("Hit... nothing");
+	}
 
-    // Add trail
+	// Add trail
 
-    BulletTrail *trail = memnew(BulletTrail);
-    LaniakeaMainLoop::get_singleton()->get_root()->add_child(trail);
+	BulletTrail *trail = memnew(BulletTrail);
+	LaniakeaMainLoop::get_singleton()->get_root()->add_child(trail);
 
-    Vector3 trail_origin = p_origin;
+	Vector3 trail_origin = p_origin;
 
-    if (!p_fire_visual_from_origin && per_slot_weapon_visual[WEAPON_SLOT_PRIMARY] != nullptr && per_slot_weapon_visual[WEAPON_SLOT_PRIMARY]->get_muzzle_location()) {
-        trail_origin = per_slot_weapon_visual[WEAPON_SLOT_PRIMARY]->get_muzzle_location()->get_global_position();
-    }
+	if (!p_fire_visual_from_origin && per_slot_weapon_visual[WEAPON_SLOT_PRIMARY] != nullptr && per_slot_weapon_visual[WEAPON_SLOT_PRIMARY]->get_muzzle_location()) {
+		trail_origin = per_slot_weapon_visual[WEAPON_SLOT_PRIMARY]->get_muzzle_location()->get_global_position();
+	}
 
-    trail->initialize(trail_origin, firing_end, 100.0f);
+	trail->initialize(trail_origin, firing_end, 100.0f);
 
-    if (result.is_empty()) {
-        return;
-    }
+	if (result.is_empty()) {
+		return;
+	}
 
-    if (IDamageable *as_damageable = dynamic_cast<IDamageable*>(result["collider"].get_validated_object()); as_damageable != nullptr) {
-        as_damageable->on_bullet_damage_received(p_ammo_type, p_damage, result["position"], result["normal"], result["shape"]);
-    }
+	if (IDamageable *as_damageable = dynamic_cast<IDamageable *>(result["collider"].get_validated_object()); as_damageable != nullptr) {
+		as_damageable->on_bullet_damage_received(p_ammo_type, p_damage, result["position"], result["normal"], result["shape"]);
+	}
 }
 
 void BaseCharacter::_physics_process(double p_delta) {
-    if (Engine::get_singleton()->is_editor_hint()) {
-        return;
-    }
+	if (Engine::get_singleton()->is_editor_hint()) {
+		return;
+	}
 
-    if (animation != nullptr) {
-        animation->physics_update(this, p_delta);
-    }
-    
-    movement.set_desired_movement_speed(get_desired_movement_speed());
-    movement.set_input_vector(get_movement_vector_transformed());
-    movement.update(p_delta);
+	if (animation != nullptr) {
+		animation->physics_update(this, p_delta);
+	}
 
-    for (int slot_i = 0; slot_i < WEAPON_SLOT_MAX; slot_i++) {
-        Ref<WeaponInstanceBase> equipped_weapon = equipped_weapons[slot_i];
-        const InputCommand input_command = slot_i == WEAPON_SLOT_PRIMARY ? InputCommand::PRIMARY_FIRE : InputCommand::SECONDARY_FIRE;
-        const bool primary_pressed = is_action_pressed(input_command);
-        if (equipped_weapon.is_valid()) {
-            WeaponInstanceBase::WeaponButtonState button_state = {
-                .fire = primary_pressed
-            };
+	movement.set_desired_movement_speed(get_desired_movement_speed());
+	movement.set_input_vector(get_movement_vector_transformed());
+	movement.update(p_delta);
 
-            if (primary_pressed) {
-                equipped_weapon->primary_attack(slot_i, button_state, this);
-            }
-            equipped_weapon->post_update(slot_i, this, button_state);
-        }
-    }
+	for (int slot_i = 0; slot_i < WEAPON_SLOT_MAX; slot_i++) {
+		Ref<WeaponInstanceBase> equipped_weapon = equipped_weapons[slot_i];
+		const InputCommand input_command = slot_i == WEAPON_SLOT_PRIMARY ? InputCommand::PRIMARY_FIRE : InputCommand::SECONDARY_FIRE;
+		const bool primary_pressed = is_action_pressed(input_command);
+		if (equipped_weapon.is_valid()) {
+			WeaponInstanceBase::WeaponButtonState button_state = {
+				.fire = primary_pressed
+			};
 
-    if (model) {
-        model->update(p_delta);
-    }
+			if (primary_pressed) {
+				equipped_weapon->primary_attack(slot_i, button_state, this);
+			}
+			equipped_weapon->post_update(slot_i, this, button_state);
+		}
+	}
+
+	if (model) {
+		model->update(p_delta);
+	}
 }
 
 void BaseCharacter::_process(double p_delta) {
-    if (Engine::get_singleton()->is_editor_hint()) {
-        return;
-    }
-    animation->update(get_desired_movement_speed(), p_delta);
+	if (Engine::get_singleton()->is_editor_hint()) {
+		return;
+	}
+	animation->update(get_desired_movement_speed(), p_delta);
 }
 
 void BaseCharacter::_ready() {
-    if (Engine::get_singleton()->is_editor_hint()) {
-        return;
-    }
+	if (Engine::get_singleton()->is_editor_hint()) {
+		return;
+	}
 
-    movement_settings = get_movement_settings();
-    movement.initialize(movement_settings, this);
-    animation = create_animation();
-    if (animation != nullptr) {
-        animation->initialize(movement_settings, model);
-    }
+	movement_settings = get_movement_settings();
+	movement.initialize(movement_settings, this);
+	animation = create_animation();
+	if (animation != nullptr) {
+		animation->initialize(movement_settings, model);
+	}
 
-    add_attack_collision_exception(get_hitbox_detector_body_rid());
-    CharacterHitboxDetector *hitbox_detector = get_model()->get_hitbox_detector();
-    if (hitbox_detector) {
-        hitbox_detector->connect("hit_received", callable_mp(this, &BaseCharacter::_hit_received));
-    }
+	add_attack_collision_exception(get_hitbox_detector_body_rid());
+	CharacterHitboxDetector *hitbox_detector = get_model()->get_hitbox_detector();
+	if (hitbox_detector) {
+		hitbox_detector->connect("hit_received", callable_mp(this, &BaseCharacter::_hit_received));
+	}
 
-    if (character_settings.is_valid()) {
-        character_state.health = character_settings->get_max_health();
-    }
+	if (character_settings.is_valid()) {
+		character_state.health = character_settings->get_max_health();
+	}
 
-    add_to_group("characters");
+	add_to_group("characters");
 }
 
 void BaseCharacter::add_attack_collision_exception(RID p_rid) {
-    if (!p_rid.is_valid()) {
-        return;
-    }
-    attack_collision_exceptions.push_back(p_rid);
+	if (!p_rid.is_valid()) {
+		return;
+	}
+	attack_collision_exceptions.push_back(p_rid);
 }
 
 void BaseCharacter::remove_attack_collision_exception(RID p_rid) {
-    attack_collision_exceptions.erase(p_rid);
+	attack_collision_exceptions.erase(p_rid);
 }
 
 TypedArray<RID> BaseCharacter::get_attack_collision_exceptions() const {
-    return attack_collision_exceptions;
+	return attack_collision_exceptions;
 }
 
 void BaseCharacter::_on_bullet_hit_received(const CharacterHitbox::HitboxGroup p_hitbox_group, const Vector3 &p_position, const Vector3 &p_normal, int p_ammo_type, float p_damage) {
-    if (character_state.dead) {
-        return;
-    }
+	if (character_state.dead) {
+		return;
+	}
 
-    int damage = p_damage;
-    if (p_hitbox_group == CharacterHitbox::HitboxGroup::HEAD) {
-        static constexpr float headshot_multiplier = 3.0f;
-        damage = p_damage * headshot_multiplier;
-    }
+	int damage = p_damage;
+	if (p_hitbox_group == CharacterHitbox::HitboxGroup::HEAD) {
+		static constexpr float headshot_multiplier = 3.0f;
+		damage = p_damage * headshot_multiplier;
+	}
 
-    apply_damage(damage, p_normal);
+	apply_damage(damage, p_normal);
 }
 
 void BaseCharacter::apply_damage(int p_damage, const Vector3 &p_last_hit_normal) {
-    DEV_ASSERT(p_damage >= 0);
-    character_state.health = MAX(character_state.health - p_damage, 0);
-    if (character_state.health == 0 && !character_state.dead) {
-        notify_dead(p_last_hit_normal);
-    }
+	DEV_ASSERT(p_damage >= 0);
+	character_state.health = MAX(character_state.health - p_damage, 0);
+	if (character_state.health == 0 && !character_state.dead) {
+		notify_dead(p_last_hit_normal);
+	}
 }
 
 Ref<MovementSettings> BaseCharacter::get_movement_settings() const {
-    Ref<MovementSettings> setts;
-    setts.instantiate();
-    return setts;
+	Ref<MovementSettings> setts;
+	setts.instantiate();
+	return setts;
 }
 
 BaseCharacter::FacingDirectionMode BaseCharacter::get_facing_direction_mode() const {
-    return facing_direction_mode;
+	return facing_direction_mode;
 }
 
-void BaseCharacter::set_facing_direction_mode(const FacingDirectionMode &facing_direction_mode_)
-{
-    facing_direction_mode = facing_direction_mode_;
+void BaseCharacter::set_facing_direction_mode(const FacingDirectionMode &facing_direction_mode_) {
+	facing_direction_mode = facing_direction_mode_;
 }
 
 Vector3 BaseCharacter::get_firing_position(int p_weapon_slot) const {
-    if (model != nullptr) {
-        return model->get_firing_position_node()->get_global_position();
-    }
-    return Vector3();
+	if (model != nullptr) {
+		return model->get_firing_position_node()->get_global_position();
+	}
+	return Vector3();
 }
 
 Ref<WeaponInstanceBase> BaseCharacter::get_equipped_weapon(const WeaponSlot p_slot) const {
-    ERR_FAIL_INDEX_V(p_slot, WEAPON_SLOT_MAX, nullptr);
-    return equipped_weapons[p_slot];
+	ERR_FAIL_INDEX_V(p_slot, WEAPON_SLOT_MAX, nullptr);
+	return equipped_weapons[p_slot];
 }
 
 Vector3 BaseCharacter::get_facing_direction() const {
-    return model->get_target_facing_direction();
+	return model->get_target_facing_direction();
 }
 
 void BaseCharacter::add_collision_exception(RID p_body) {
-    movement.add_collision_exception(p_body);
+	movement.add_collision_exception(p_body);
 }
 
 void BaseCharacter::remove_collision_exception(RID p_body) {
-    movement.remove_collision_exception(p_body);
+	movement.remove_collision_exception(p_body);
 }
 
 int BaseCharacter::get_remaining_ammo_in_pool(int p_ammo_type) const {
-    ERR_FAIL_INDEX_V(p_ammo_type, character_state.ammo_pools.size(), 0);
-    return character_state.ammo_pools[p_ammo_type];
+	ERR_FAIL_INDEX_V(p_ammo_type, character_state.ammo_pools.size(), 0);
+	return character_state.ammo_pools[p_ammo_type];
 }
 
 void BaseCharacter::subtract_ammo_for_weapon(int p_slot, Ref<WeaponInstanceBase> p_weapon, int p_amount) {
-    auto it = character_state.weapon_clip_amounts.find(p_weapon->get_weapon_name());
-    if (it == character_state.weapon_clip_amounts.end()) {
-        character_state.weapon_clip_amounts[p_weapon->get_weapon_name()] = 0;
-    }
+	auto it = character_state.weapon_clip_amounts.find(p_weapon->get_weapon_name());
+	if (it == character_state.weapon_clip_amounts.end()) {
+		character_state.weapon_clip_amounts[p_weapon->get_weapon_name()] = 0;
+	}
 
-    character_state.weapon_clip_amounts[p_weapon->get_weapon_name()] = MAX(character_state.weapon_clip_amounts[p_weapon->get_weapon_name()] - p_amount, 0);
-    
-    if (!equipped_weapons[0].is_valid()) {
-        return;
-    }
+	character_state.weapon_clip_amounts[p_weapon->get_weapon_name()] = MAX(character_state.weapon_clip_amounts[p_weapon->get_weapon_name()] - p_amount, 0);
 
-    if (equipped_weapons[0]->get_weapon_name() == p_weapon->get_weapon_name()) {
-        _on_weapon_ammo_used(WEAPON_SLOT_PRIMARY, p_weapon);
-    }
+	if (!equipped_weapons[0].is_valid()) {
+		return;
+	}
+
+	if (equipped_weapons[0]->get_weapon_name() == p_weapon->get_weapon_name()) {
+		_on_weapon_ammo_used(WEAPON_SLOT_PRIMARY, p_weapon);
+	}
 }
 
 void BaseCharacter::reload_weapon(int p_slot, Ref<WeaponInstanceBase> p_weapon, int p_ammo_type, int p_clip_capacity) {
-    const int ammo_type = p_ammo_type;
+	const int ammo_type = p_ammo_type;
 
-    const StringName weapon_name = p_weapon->get_weapon_name();
+	const StringName weapon_name = p_weapon->get_weapon_name();
 
-    auto it = character_state.weapon_clip_amounts.find(weapon_name);
-    if (it == character_state.weapon_clip_amounts.end()) {
-        character_state.weapon_clip_amounts[weapon_name] = 0;
-    }
+	auto it = character_state.weapon_clip_amounts.find(weapon_name);
+	if (it == character_state.weapon_clip_amounts.end()) {
+		character_state.weapon_clip_amounts[weapon_name] = 0;
+	}
 
-    const int rounds_to_add = MAX(p_clip_capacity - character_state.weapon_clip_amounts[weapon_name], 0);
-    const int final_amount_to_transfer_clamped = MIN(rounds_to_add, get_remaining_ammo_in_pool(ammo_type));
-    character_state.ammo_pools[ammo_type] -= final_amount_to_transfer_clamped;
+	const int rounds_to_add = MAX(p_clip_capacity - character_state.weapon_clip_amounts[weapon_name], 0);
+	const int final_amount_to_transfer_clamped = MIN(rounds_to_add, get_remaining_ammo_in_pool(ammo_type));
+	character_state.ammo_pools[ammo_type] -= final_amount_to_transfer_clamped;
 
-    character_state.weapon_clip_amounts[weapon_name] += final_amount_to_transfer_clamped;
-    _on_weapon_reloaded(p_slot, p_weapon);
+	character_state.weapon_clip_amounts[weapon_name] += final_amount_to_transfer_clamped;
+	_on_weapon_reloaded(p_slot, p_weapon);
 }
 
 int BaseCharacter::get_ammo_in_weapon_clip(StringName p_weapon_name) const {
-    auto it = character_state.weapon_clip_amounts.find(p_weapon_name);
-    return it != character_state.weapon_clip_amounts.end() ? it->value : 0;
+	auto it = character_state.weapon_clip_amounts.find(p_weapon_name);
+	return it != character_state.weapon_clip_amounts.end() ? it->value : 0;
 }
 
-void BaseCharacter::begin_reload() {
-    animation->trigger_upper_body_sequence(BipedAnimationBase::SEQUENCE_RELOAD);
+Ref<AnimationSequenceFuture> BaseCharacter::trigger_sequence(const BipedAnimationBase::CharacterAnimationSequence p_sequence) {
+	return animation->trigger_sequence(p_sequence);
 }
 
-double BaseCharacter::get_reload_duration() const {
-    return animation->get_upper_body_sequence_duration(BipedAnimationBase::SEQUENCE_RELOAD);
+void BaseCharacter::abort_sequence(Ref<AnimationSequenceFuture> p_animation_sequence) {
+	animation->abort_sequence(p_animation_sequence);
 }
 
 RID BaseCharacter::get_hitbox_detector_body_rid() const {
-    CharacterHitboxDetector *hitbox_detector = get_model()->get_hitbox_detector();
-    if (hitbox_detector) {
-        return hitbox_detector->get_rid();
-    }
+	CharacterHitboxDetector *hitbox_detector = get_model()->get_hitbox_detector();
+	if (hitbox_detector) {
+		return hitbox_detector->get_rid();
+	}
 
-    return RID();
+	return RID();
 }
 
 BaseCharacter::BaseCharacter() {
-    set_physics_interpolation_mode(PHYSICS_INTERPOLATION_MODE_ON);
-    character_state.ammo_pools.resize(LaniakeaGameRules::AmmoTypes::AMMO_TYPE_MAX);
-    for (int i = 0; i < character_state.ammo_pools.size(); i++) {
-        character_state.ammo_pools[i] = 0;
-    }
+	set_physics_interpolation_mode(PHYSICS_INTERPOLATION_MODE_ON);
+	character_state.ammo_pools.resize(LaniakeaGameRules::AmmoTypes::AMMO_TYPE_MAX);
+	for (int i = 0; i < character_state.ammo_pools.size(); i++) {
+		character_state.ammo_pools[i] = 0;
+	}
 }
 
 BaseCharacter::~BaseCharacter() {
-    if (animation != nullptr) {
-        memdelete(animation);
-    }
+	if (animation != nullptr) {
+		memdelete(animation);
+	}
 }
 
 void BaseCharacter::equip_weapon(WeaponSlot p_slot, Ref<WeaponInstanceBase> p_weapon) {
-    if (equipped_weapons[p_slot].is_valid()) {
-        if (per_slot_weapon_visual[p_slot] != nullptr) {
-            per_slot_weapon_visual[p_slot]->queue_free();
-            per_slot_weapon_visual[p_slot] = nullptr;
-        }
-        equipped_weapons[p_slot]->unequipped(p_slot, this);
-        equipped_weapons[p_slot] = Ref<WeaponInstanceBase>();
-    }
+	if (equipped_weapons[p_slot].is_valid()) {
+		if (per_slot_weapon_visual[p_slot] != nullptr) {
+			per_slot_weapon_visual[p_slot]->queue_free();
+			per_slot_weapon_visual[p_slot] = nullptr;
+		}
+		equipped_weapons[p_slot]->unequipped(p_slot, this);
+		equipped_weapons[p_slot] = Ref<WeaponInstanceBase>();
+	}
 
-    equipped_weapons[p_slot] = p_weapon;
-    
-    if (!p_weapon.is_valid()) {
-        _on_weapon_equipped(p_slot, p_weapon);
-        return;
-    }
+	equipped_weapons[p_slot] = p_weapon;
 
-    p_weapon->equipped(p_slot, this);
+	if (!p_weapon.is_valid()) {
+		_on_weapon_equipped(p_slot, p_weapon);
+		return;
+	}
 
-    if (model->get_hand_attachment_node() == nullptr) {
-        _on_weapon_equipped(p_slot, p_weapon);
-        return;
-    }
+	p_weapon->equipped(p_slot, this);
 
-    if (WeaponModel *weapon_visual = p_weapon->instantiate_visuals(); weapon_visual != nullptr) {
-        model->get_hand_attachment_node()->add_child(weapon_visual);
-        per_slot_weapon_visual[p_slot] = weapon_visual;
-    }
-    _on_weapon_equipped(p_slot, p_weapon);
+	if (model->get_hand_attachment_node() == nullptr) {
+		_on_weapon_equipped(p_slot, p_weapon);
+		return;
+	}
+
+	if (WeaponModel *weapon_visual = p_weapon->instantiate_visuals(); weapon_visual != nullptr) {
+		model->get_hand_attachment_node()->add_child(weapon_visual);
+		per_slot_weapon_visual[p_slot] = weapon_visual;
+	}
+	_on_weapon_equipped(p_slot, p_weapon);
 }
