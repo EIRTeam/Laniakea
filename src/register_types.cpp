@@ -4,6 +4,7 @@
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/core/defs.hpp>
 #include <godot_cpp/godot.hpp>
+#include <godot_cpp/classes/engine.hpp>
 
 #include "chunkinator/chunk_spawner.h"
 #include "chunkinator/chunkinator_debug_snapshot_viewer.h"
@@ -18,10 +19,12 @@
 #include "game/base_character.h"
 #include "game/biped_animation_base.h"
 #include "game/bullet_trail.h"
+#include "game/character_animation_base.h"
 #include "game/character_animation_settings.h"
 #include "game/character_hitbox.h"
 #include "game/character_hitbox_detector.h"
 #include "game/character_model.h"
+#include "game/game_rules.h"
 #include "game/game_rules_laniakea.h"
 #include "game/main_loop.h"
 #include "game/movement_settings.h"
@@ -40,6 +43,10 @@
 #include "game/weapon_firearm.h"
 #include "game/weapon_model.h"
 #include "game/weapon_rifle_test.h"
+#include "godot_cpp/classes/editor_plugin_registration.hpp"
+#include "godot_cpp/classes/resource_format_loader.hpp"
+#include "godot_cpp/classes/resource_importer.hpp"
+#include "godot_cpp/classes/scene_tree.hpp"
 #include "indirect_mesh.h"
 #include "animation/inertialization_skeleton_modifier_polynomial.h"
 #include "quadtree.h"
@@ -50,11 +57,46 @@
 #include "indirect_mesh_instance_3d.h"
 #include "game/player_camera.h"
 #include "animation/hip_rotator_modifier.h"
+#include "vehicle/clutch.h"
+#include "vehicle/engine_sound_config.h"
+#include "vehicle/engine_sound_import_plugin.h"
+#include "vehicle/shaft.h"
+#include "vehicle/suspension_test.h"
+#include "vehicle/vehicle.h"
+#include "vehicle/vehicle_differential.h"
+#include "vehicle/vehicle_drivetrain_config.h"
+#include "vehicle/vehicle_drivetrain_debugger.h"
+#include "vehicle/vehicle_engine.h"
+#include "vehicle/vehicle_engine_settings.h"
+#include "vehicle/vehicle_settings.h"
+#include "vehicle/vehicle_suspension_macpherson_settings.h"
+#include "vehicle/vehicle_suspension_settings.h"
+#include "vehicle/vehicle_wheel.h"
+#include "vehicle/vehicle_wheel_settings.h"
+#include "vehicle/engine_sound_editor_plugin.h"
+#include "vehicle/vehicle_wheel_shaft.h"
 
 using namespace godot;
 
+void _editor_init() {
+	DebugOverlay *overlay = memnew(DebugOverlay);
+	MainLoop *main_loop = Engine::get_singleton()->get_main_loop();
+	overlay->initialize(Object::cast_to<SceneTree>(main_loop));
+}
+
 void initialize_gdextension_types(ModuleInitializationLevel p_level)
 {
+	if (p_level == MODULE_INITIALIZATION_LEVEL_EDITOR) {
+		if (!Engine::get_singleton()->is_editor_hint()) {
+			return;
+		}
+		callable_mp_static(&_editor_init).call_deferred();
+
+		GDREGISTER_CLASS(AngeTheGreatSimImporter);
+		GDREGISTER_CLASS(LNVehicleSoundEditorPlugin);
+		EditorPlugins::add_by_type<LNVehicleSoundEditorPlugin>();
+		return;
+	}
 	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
 		return;
 	}
@@ -73,6 +115,7 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level)
 	GDREGISTER_ABSTRACT_CLASS(ConsoleGUI);
 	GDREGISTER_CLASS(PlayerCamera);
 	GDREGISTER_CLASS(LaniakeaMainLoop);
+	GDREGISTER_ABSTRACT_CLASS(GameRules);
 	GDREGISTER_ABSTRACT_CLASS(LaniakeaGameRules);
 	GDREGISTER_CLASS(MovementSettings);
 	GDREGISTER_ABSTRACT_CLASS(Chunkinator);
@@ -109,11 +152,35 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level)
 	GDREGISTER_CLASS(RexbotConfiguration);
 	GDREGISTER_ABSTRACT_CLASS(RexbotNPCBase);
 	GDREGISTER_ABSTRACT_CLASS(DebugTextLineDrawer);
+	GDREGISTER_ABSTRACT_CLASS(AnimationSequenceFuture);
+	GDREGISTER_ABSTRACT_CLASS(BipedAnimationSequenceFuture);
+	GDREGISTER_ABSTRACT_CLASS(DebugOverlay);
 	GDREGISTER_CLASS(NPCTurret);
+	GDREGISTER_ABSTRACT_CLASS(LNVehicleShaft);
+	GDREGISTER_CLASS(LNVehicleEngineSettings);
+	GDREGISTER_CLASS(LNVehicleDrivetrainSettings);
+	GDREGISTER_CLASS(LNVehicleSettings);
+	GDREGISTER_CLASS(LNVehicleWheelSettings);
+	GDREGISTER_ABSTRACT_CLASS(LNVehicleSuspensionSettings);
+	GDREGISTER_CLASS(LNVehicleMacPhersonSuspensionSettings);
+	GDREGISTER_CLASS(LNVehicle);
+	GDREGISTER_CLASS(LNVehicleWheel);
+	GDREGISTER_CLASS(LNVehicleEngine);
+	GDREGISTER_ABSTRACT_CLASS(LNVehicleDifferential);
+	GDREGISTER_ABSTRACT_CLASS(LNVehicleGearbox);
+	GDREGISTER_ABSTRACT_CLASS(LNVehicleClutchNode);
+	GDREGISTER_ABSTRACT_CLASS(LNVehicleDrivetrainDebugger);
+	GDREGISTER_ABSTRACT_CLASS(LNVehicleWheelShaft);
+	GDREGISTER_CLASS(LNEngineSoundConfiguration);
+	GDREGISTER_CLASS(SuspensionTest);
 }
 
 void uninitialize_gdextension_types(ModuleInitializationLevel p_level) {
-	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
+	if (p_level == MODULE_INITIALIZATION_LEVEL_EDITOR) {
+		if (!Engine::get_singleton()->is_editor_hint()) {
+			return;
+		}
+		memdelete(DebugOverlay::get_singleton());
 		return;
 	}
 }

@@ -13,7 +13,9 @@
 #define MAKE_BIND_STRING_NAME(m_class, m_name) MAKE_BIND_T(m_class, m_name, Variant::STRING_NAME, PROPERTY_HINT_NONE, "");
 #define MAKE_BIND_FLOAT(m_class, m_name) MAKE_BIND_T(m_class, m_name, Variant::FLOAT, PROPERTY_HINT_NONE, "");
 #define MAKE_BIND_VECTOR3_DEGREES(m_class, m_name) MAKE_BIND_T(m_class, m_name, Variant::VECTOR3, PROPERTY_HINT_NONE, "-360,360,0.1,or_less,or_greater,radians_as_degrees");
+#define MAKE_BIND_VECTOR3(m_class, m_name) MAKE_BIND_T(m_class, m_name, Variant::VECTOR3, PROPERTY_HINT_NONE, "");
 #define MAKE_BIND_INT(m_class, m_name) MAKE_BIND_T(m_class, m_name, Variant::INT, PROPERTY_HINT_NONE, "");
+#define MAKE_BIND_BOOL(m_class, m_name) MAKE_BIND_T(m_class, m_name, Variant::BOOL, PROPERTY_HINT_NONE, "");
 #define MAKE_BIND_RESOURCE(m_class, m_name, m_resource_type) MAKE_BIND_T(m_class, m_name, Variant::OBJECT, PROPERTY_HINT_RESOURCE_TYPE, _STR(m_resource_type));
 #define MAKE_BIND_FLOAT32_ARRAY(m_class, m_name) MAKE_BIND_T(m_class, m_name, Variant::PACKED_FLOAT32_ARRAY, PROPERTY_HINT_NONE, "");
 #define MAKE_BIND_NODE(m_class, m_name, m_node_type) MAKE_BIND_T(m_class, m_name, Variant::OBJECT, PROPERTY_HINT_NODE_TYPE, _STR(m_node_type));

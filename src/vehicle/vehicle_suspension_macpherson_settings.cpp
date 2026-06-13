@@ -19,6 +19,8 @@ void LNVehicleMacPhersonSuspensionSettings::_bind_methods() {
     MAKE_BIND_VECTOR3(LNVehicleMacPhersonSuspensionSettings, bottom_wishbone_front);    
     MAKE_BIND_VECTOR3(LNVehicleMacPhersonSuspensionSettings, bottom_wishbone_rear);
     MAKE_BIND_VECTOR3(LNVehicleMacPhersonSuspensionSettings, bottom_wishbone_tyre);
+	MAKE_BIND_VECTOR3(LNVehicleMacPhersonSuspensionSettings, steering_rod_hub);
+	MAKE_BIND_VECTOR3(LNVehicleMacPhersonSuspensionSettings, steering_rod_rack);
 }
 
 float LNVehicleMacPhersonSuspensionSettings::get_rest_spring_length() const {
@@ -28,7 +30,9 @@ float LNVehicleMacPhersonSuspensionSettings::get_rest_spring_length() const {
 void LNVehicleMacPhersonSuspensionSettings::_rebuild_cache() {
     Transform3D suspension_trf = Transform3D();
     
-    LNVehicleSuspension::WheelFrameOut test_frame = LNVehicleSuspension::build_wheel_frame(0.0f, 0.0f, Transform3D(), 1.0f, 0.0f, get_toe_out(), get_bottom_wishbone_tyre().direction_to(get_strut_car()), 0.0f);
+	LNVehicleSuspension::WheelFrameOut test_frame = LNVehicleSuspension::build_wheel_frame({ .bottom_ball_joint_world = get_bottom_wishbone_tyre(),
+			.steering_axis_world = get_bottom_wishbone_tyre().direction_to(get_strut_car()),
+			.use_steering = false });
     
     Transform3D original_steering_trf = Transform3D();
     original_steering_trf.basis = Basis(test_frame.steering_axis_right_world, test_frame.steering_axis_up_world, test_frame.steering_axis_forward_world);
@@ -45,8 +49,7 @@ void LNVehicleMacPhersonSuspensionSettings::_rebuild_cache() {
 
     const float design_camber = up_camber_plane.signed_angle_to(
         axis_camber_plane,
-        Vector3(0, 0, 1)
-    );
+			Vector3(0, 0, 1));
 
     const Plane world_horizontal = Plane(Vector3(0, 1, 0));
     Vector3 wheel_fwd_flat = world_horizontal.project(test_frame.steering_axis_forward_world).normalized();
@@ -55,14 +58,15 @@ void LNVehicleMacPhersonSuspensionSettings::_rebuild_cache() {
     // Angle to rotate the steering axis around its own up to zero the toe
     const float design_toe = wheel_fwd_flat.signed_angle_to(
         world_fwd_flat,
-        test_frame.steering_axis_up_world  // rotate around hub up so camber is preserved
+			test_frame.steering_axis_up_world // rotate around hub up so camber is preserved
     );
 
-    macpherson_cache = MacPhersonCache {
+	macpherson_cache = MacPhersonCache{
         .design_camber = design_camber,
         .design_toe = design_toe,
         .bottom_balljoint_hub_local = hub_trf.affine_inverse().xform(suspension_trf.xform(get_bottom_wishbone_tyre())),
-        .hub_wheel_local = original_steering_trf.affine_inverse().xform(Vector3())
+		.hub_wheel_local = original_steering_trf.affine_inverse().xform(Vector3()),
+		.wheel_local_steer = original_steering_trf.affine_inverse().xform(get_steering_rod_hub())
     };
 
     const Vector3 inner_rear_attachment_suspension_space = get_bottom_wishbone_rear();
@@ -76,13 +80,17 @@ void LNVehicleMacPhersonSuspensionSettings::_rebuild_cache() {
     const Vector3 control_arm_proj_up = control_arm_proj_right.cross(inner_rear_to_inner_front.normalized());
 
     macpherson_cache->pivot_center = control_arm_proj;
+	// These define the plane on which the ball joint moves
     macpherson_cache->pivot_axis_right = control_arm_proj_right;
     macpherson_cache->pivot_axis_up = control_arm_proj_up;
 
+	// Essentially, we project the ball joint position on the axis defined by the front and rear wishbone attachment points
+	// this puts it on a plane parallel to world forward, which lets us calculate the control arm length in that plane
+	// this is later used for solving the ball joint position
     macpherson_cache->bottom_control_arm_length_2d = control_arm_proj.distance_to(balljoint_suspension_space);
-    // Find minimum and maximum strut length
 
-
+	// Find minimum and maximum strut length, until it becomes degenerate
+	// do note this isn't perfect yet, the steering isn't taken into account at all
     float design_0_length = get_strut_car().distance_to(get_bottom_wishbone_tyre());
 
     float maximum_test = get_strut_car().distance_to(control_arm_proj) + macpherson_cache->bottom_control_arm_length_2d;
@@ -98,7 +106,7 @@ void LNVehicleMacPhersonSuspensionSettings::_rebuild_cache() {
     std::optional<float> maximum_shock;
 
     for (int i = 0; i < steps; i++) {
-        const float extension = Math::lerp(minimum_test, maximum_test, (i+1) / static_cast<float>(steps));
+		const float extension = Math::lerp(minimum_test, maximum_test, (i + 1) / static_cast<float>(steps));
         Vector3 intersection;
         if (solve_ball_joint_location(get_strut_car(), 1.0f, macpherson_cache->bottom_control_arm_length_2d, extension, control_arm_proj, control_arm_proj_right, control_arm_proj_up, intersection)) {
             if (!minimum_shock.has_value()) {
@@ -121,7 +129,7 @@ void LNVehicleMacPhersonSuspensionSettings::_rebuild_cache() {
 
 bool LNVehicleMacPhersonSuspensionSettings::solve_ball_joint_location(const Vector3 &p_upper_shock_mount_world, float p_side_sign, const float &p_control_arm_length, const float &p_strut_length, const Vector3 &p_pivot_axis_proj, const Vector3 &p_pivot_axis_right, const Vector3 &p_pivot_axis_up, Vector3 &p_r_out_intersection) {
     // ---- Planar 2D solve ----------------------------------------------------
-    // We solve in a 2D plane defined by (ComponentRightWorld, ComponentUpWorld),
+	// We solve in a 2D plane defined by (suspension_right_world, suspension_up_world),
     // with the component origin as the 2D origin.
     //
     // Interpretation:
@@ -129,44 +137,36 @@ bool LNVehicleMacPhersonSuspensionSettings::solve_ball_joint_location(const Vect
     //  - Circle B: centered at upper shock mount projected into the plane, radius = strut length
     //
     // Their intersection(s) define possible ball joint locations in the mechanism plane.
-    const Vector2 Component2D = Vector2();
-    const Vector2 UpperShockMount2D = LNMath::to_plane_2d(p_upper_shock_mount_world,
+	const Vector2 suspension_origin_2d = Vector2();
+	const Vector2 upper_shock_mount_2d = LNMath::to_plane_2d(p_upper_shock_mount_world,
         p_pivot_axis_proj, p_pivot_axis_right, p_pivot_axis_up);
 
-    Vector2 IntersectionA2D;
-    Vector2 IntersectionB2D;
-    const int32_t IntersectionsCount = LNMath::circle_intersect(Component2D,
+	Vector2 intersection_a_2d;
+	Vector2 intersection_b_2d;
+	const int32_t intersection_count = LNMath::circle_intersect(suspension_origin_2d,
                                                     p_control_arm_length,
-                                                    UpperShockMount2D,
+			upper_shock_mount_2d,
                                                     p_strut_length,
-                                                IntersectionA2D,
-                                                IntersectionB2D,
+			intersection_a_2d,
+			intersection_b_2d,
                                                 1e-4f);
     
-
-    Vector3 fwd = p_pivot_axis_up.cross(p_pivot_axis_right).normalized();
-    const Vector3 proj = LNMath::from_plane_2d(Component2D, p_pivot_axis_proj, p_pivot_axis_right, p_pivot_axis_up);
-    //DebugOverlay::circle_with_dir(proj, fwd, p_control_arm_length, Color(0.0, 1.0, 0.0, 0.25f));
-    //DebugOverlay::circle_with_dir(LNMath::from_plane_2d(UpperShockMount2D, p_pivot_axis_proj, p_pivot_axis_right, p_pivot_axis_up), fwd, p_strut_length, Color(0.0, 0.0, 1.0, 0.25f));
-
-    if (IntersectionsCount == 2)
-    {
+	if (intersection_count == 2) {
         // Two possible solutions: choose the "outboard" one.
         // We define outboard as the intersection with the larger signed X when mirrored by side.
         // SideSign ensures correct selection for left/right.
-        const float Outboard1 = IntersectionA2D.x * (p_side_sign);
-        const float Outboard2 = IntersectionB2D.x * (p_side_sign);
+		const float outboard_1 = intersection_a_2d.x * (p_side_sign);
+		const float outboard_2 = intersection_b_2d.x * (p_side_sign);
 
-        const Vector2 Chosen2D = (Outboard1 <= Outboard2) ? IntersectionA2D : IntersectionB2D;
+		const Vector2 chosen_2d = (outboard_1 <= outboard_2) ? intersection_a_2d : intersection_b_2d;
         
-        p_r_out_intersection = LNMath::from_plane_2d(Chosen2D,
+		p_r_out_intersection = LNMath::from_plane_2d(chosen_2d,
                             p_pivot_axis_proj, p_pivot_axis_right, p_pivot_axis_up);
         return true;
     }
-    if (IntersectionsCount == 1)
-    {
+	if (intersection_count == 1) {
         // Tangent case: a single intersection (mechanism at boundary of feasibility).
-        p_r_out_intersection = LNMath::from_plane_2d(IntersectionA2D,
+		p_r_out_intersection = LNMath::from_plane_2d(intersection_a_2d,
                             p_pivot_axis_proj, p_pivot_axis_right, p_pivot_axis_up);
         return true;
     }
@@ -198,31 +198,30 @@ LNVehicleSuspensionSettings::SuspensionSolveResult LNVehicleMacPhersonSuspension
     const Vector3 bottom_tyre_ball_joint_world = state->suspension_transform_world.xform(state->bottom_tyre_ball_joint_suspension_local);
     const Vector3 strut_attachment_world = state->suspension_transform_world.xform(get_strut_car());
 
-    LNVehicleSuspension::WheelFrameOut wheel_frame = LNVehicleSuspension::build_wheel_frame(macpherson_cache->design_camber, macpherson_cache->design_toe, vehicle_transform, side_sign, Math::deg_to_rad(get_static_camber_degrees()), 0.0f, bottom_tyre_ball_joint_world.direction_to(strut_attachment_world), state->steering_angle_rads);
+	LNVehicleSuspension::WheelFrameOut wheel_frame = LNVehicleSuspension::build_wheel_frame({ .tie_rod_rack_position_world = p_tie_rod_rack_position_world,
+			.tie_rod_wheel_local = macpherson_cache->wheel_local_steer,
+			.tie_rod_length = get_steering_rod_hub().distance_to(get_steering_rod_rack()),
+			.bottom_ball_joint_world = bottom_tyre_ball_joint_world,
+			.design_zero_camber = macpherson_cache->design_camber,
+			.design_zero_toe = macpherson_cache->design_toe,
 
-    DebugOverlay::line(bottom_tyre_ball_joint_world, bottom_tyre_ball_joint_world + wheel_frame.steering_axis_right_world * 0.1f, Color("Red").darkened(0.5f));
-    DebugOverlay::line(bottom_tyre_ball_joint_world, bottom_tyre_ball_joint_world + wheel_frame.steering_axis_forward_world * 0.1f, Color("Blue").darkened(0.5f));
-    DebugOverlay::line(bottom_tyre_ball_joint_world, bottom_tyre_ball_joint_world + wheel_frame.steering_axis_up_world * 0.1f, Color("Green").darkened(0.5f));
-
-    /*DebugOverlay::line(bottom_tyre_ball_joint_world, bottom_tyre_ball_joint_world + wheel_frame.wheel_trf_out.xform(Vector3(1.0, 0.0, 0.0)) * 0.1f, Color("Red"));
-    DebugOverlay::line(bottom_tyre_ball_joint_world, bottom_tyre_ball_joint_world + wheel_frame.wheel_trf_out.xform(Vector3(0.0, 0.0, -1.0)) * 0.1f, Color("Blue"));
-    DebugOverlay::line(bottom_tyre_ball_joint_world, bottom_tyre_ball_joint_world + wheel_frame.wheel_trf_out.xform(Vector3(0.0, 1.0, 0.0)) * 0.1f, Color("Green"));*/
+			.vehicle_transform = p_vehicle->get_global_transform(),
+			.side_sign = side_sign,
+			.setup_camber = Math::deg_to_rad(get_static_camber_degrees()),
+			.steering_axis_world = bottom_tyre_ball_joint_world.direction_to(strut_attachment_world),
+			.use_steering = state->can_steer });
 
     const float tire_width = p_wheel_settings->get_width();
     const float tire_radius = p_wheel_settings->get_radius();
 
     const Vector3 inner_rear_attachment_world = state->suspension_transform_world.xform(get_bottom_wishbone_rear());
     const Vector3 inner_front_attachment_world = state->suspension_transform_world.xform(get_bottom_wishbone_front());
-
-    DebugOverlay::filled_arrow(strut_attachment_world, bottom_tyre_ball_joint_world, 0.05f, Color("GREEN"));
     
     const Vector3 control_arm_proj = p_state->suspension_transform_world.xform(macpherson_cache->pivot_center);
     const Vector3 control_arm_proj_right = p_state->suspension_transform_world.basis.xform(macpherson_cache->pivot_axis_right);
     const Vector3 control_arm_proj_up = p_state->suspension_transform_world.basis.xform(macpherson_cache->pivot_axis_up);
 
     const float control_arm_length_2d = macpherson_cache->bottom_control_arm_length_2d;
-
-    Vector3 out;
 
     float strut_length = p_state->shock_length;
 
@@ -231,21 +230,21 @@ LNVehicleSuspensionSettings::SuspensionSolveResult LNVehicleMacPhersonSuspension
     const int cast_count_width = 3;
     const int cast_count_radial = 6;
 
-    Transform3D wheel_trf =  Transform3D(
+	// Wheel -> ground casting
+	{
+		Transform3D wheel_trf = Transform3D(
         Basis(
             side_sign * wheel_frame.steering_axis_right_world,
             wheel_frame.steering_axis_up_world,
-            wheel_frame.steering_axis_forward_world
-        ),
-        bottom_tyre_ball_joint_world
-    );
+						wheel_frame.steering_axis_forward_world),
+				bottom_tyre_ball_joint_world);
 
     Vector3 hub_pos_world = wheel_trf.xform(macpherson_cache->hub_wheel_local);
 
     for (int i = 0; i < cast_count_width; i++) {
-        const float muf_long = i / static_cast<float>(cast_count_width-1);
+			const float muf_long = i / static_cast<float>(cast_count_width - 1);
         for (int j = 0; j < cast_count_radial; j++) {
-            const float muf_radial = j / static_cast<float>(cast_count_radial-1);
+				const float muf_radial = j / static_cast<float>(cast_count_radial - 1);
             LNVehicleSuspension::WheelIntersectionResult intersection_result = LNVehicleSuspension::do_wheel_intersection(p_vehicle, (-side_sign) * wheel_frame.steering_axis_right_world, wheel_frame.steering_axis_up_world, tire_width, tire_radius, hub_pos_world, muf_long, muf_radial);
             if (!intersection_result.hit) {
                 continue;
@@ -258,17 +257,18 @@ LNVehicleSuspensionSettings::SuspensionSolveResult LNVehicleMacPhersonSuspension
 
             if (p_vehicle->to_local(intersection_result.wheel_center_position).y > p_vehicle->to_local(highest_hit_world->wheel_center_position).y) {
                 highest_hit_world = intersection_result;
+				}
             }
         }
     }
 
     if (highest_hit_world.has_value()) {
+		// We are on the ground, find an estimated ball joint position to calculate the new strut length
         Transform3D hub_trf;
         hub_trf.basis = Basis(
             side_sign * wheel_frame.steering_axis_right_world,
             wheel_frame.steering_axis_up_world,
-            wheel_frame.steering_axis_forward_world
-        );
+				wheel_frame.steering_axis_forward_world);
         hub_trf.origin = highest_hit_world->wheel_center_position;
         Vector3 new_balljoint_pos = hub_trf.xform(macpherson_cache->bottom_balljoint_hub_local);
         strut_length = strut_attachment_world.distance_to(new_balljoint_pos);
@@ -276,22 +276,24 @@ LNVehicleSuspensionSettings::SuspensionSolveResult LNVehicleMacPhersonSuspension
     }
 
     // Spring forces
-    
     LNVehicleSuspension::SuspensionForceResult force_result;
 
     if (highest_hit_world.has_value()) {
         state->prev_shock_length = state->shock_length;
         force_result = LNVehicleSuspension::compute_suspension_force(this, true, get_rest_spring_length(), state->prev_shock_length, strut_length, p_delta);
+		// Spring force went negative, meaning we have to lift the wheels off the ground
         if (force_result.spring_force < 0.0f) {
             highest_hit_world.reset();
         }
     } else if (!highest_hit_world.has_value()) {
         // wheel is in the air, extend it
         // spring length has not changed in this frame since we didn't get a hit, so we will use state->prev_strut_length to estimate the velocity
+		// TODO: Make this affect the chassis
         force_result = LNVehicleSuspension::compute_suspension_force(this, false, get_rest_spring_length(), state->prev_shock_length, p_state->shock_length, p_delta);
     }
 
     if (!highest_hit_world.has_value()) {
+		// Airborne case, we need to make the spring get affected by gravity
         float gravity_force = p_wheel_settings->get_mass() * 9.81f * bottom_tyre_ball_joint_world.direction_to(strut_attachment_world).dot(Vector3(0, -1, 0));
         float net_force = force_result.clamped_total_force - gravity_force;
         float suspension_acceleration = net_force / p_wheel_settings->get_mass();
@@ -303,23 +305,20 @@ LNVehicleSuspensionSettings::SuspensionSolveResult LNVehicleMacPhersonSuspension
     
     // Solve ball joint location
 
-    Transform3D suspension_trf_inv = state->suspension_transform_world.affine_inverse();
     Vector3 strut_attachment_suspension_space = get_strut_car();
 
-    if (solve_ball_joint_location(strut_attachment_suspension_space, 1.0f, control_arm_length_2d, strut_length, macpherson_cache->pivot_center, macpherson_cache->pivot_axis_right, macpherson_cache->pivot_axis_up, out)) {
+	if (solve_ball_joint_location(strut_attachment_suspension_space, 1.0f, control_arm_length_2d, strut_length, macpherson_cache->pivot_center, macpherson_cache->pivot_axis_right, macpherson_cache->pivot_axis_up, state->bottom_tyre_ball_joint_suspension_local)) {
         float prev_shock_length = state->shock_length;
-        state->bottom_tyre_ball_joint_suspension_local = out;
 
         Transform3D new_steering_trf = Transform3D(
             Basis(
-                side_sign * wheel_frame.steering_axis_right_world,
+						wheel_frame.steering_axis_right_world,
                 wheel_frame.steering_axis_up_world,
-                wheel_frame.steering_axis_forward_world
-            ),
-            p_state->suspension_transform_world.xform(state->bottom_tyre_ball_joint_suspension_local)
-        );
+						wheel_frame.steering_axis_forward_world),
+				p_state->suspension_transform_world.xform(state->bottom_tyre_ball_joint_suspension_local));
 
-        hub_pos_world = new_steering_trf.xform(macpherson_cache->hub_wheel_local);
+		const Vector3 hub_pos_world = new_steering_trf.xform(macpherson_cache->hub_wheel_local * Vector3(side_sign, 1.0f, 1.0f));
+
         state->shock_length = strut_length;
 
         const Vector3 wishbone_front = state->suspension_transform_world.xform(get_bottom_wishbone_front());
@@ -330,18 +329,23 @@ LNVehicleSuspensionSettings::SuspensionSolveResult LNVehicleMacPhersonSuspension
 
         // Grounded
         if (highest_hit_world.has_value()) {
-            Vector3 ShockAxis  = p_state->suspension_transform_world.xform(state->bottom_tyre_ball_joint_suspension_local).direction_to(strut_attachment_world);
-            const float Cos = MAX(0.0f, ShockAxis.dot(highest_hit_world->ground_normal));
-            const Vector3 force_to_apply = highest_hit_world->ground_normal * (force_result.clamped_total_force * Cos);
 
+			Vector3 shock_axis = new_steering_trf.origin.direction_to(strut_attachment_world);
+			// In real life, forces would get applied through
+			Vector3 force_to_apply = highest_hit_world->ground_normal * shock_axis.dot(highest_hit_world->ground_normal) * force_result.clamped_total_force;
             return {
                 .success = true,
                 .grounded = true,
                 .force_to_apply = force_to_apply,
-                .force_world_position = highest_hit_world->ground_hit_position,
+				.total_force = force_result.clamped_total_force,
+				.force_world_position = strut_attachment_world,
                 .wheel_transform = Transform3D(new_steering_trf.basis, hub_pos_world),
+				.wheel_axis_x = new_steering_trf.basis.get_column(0),
+				.wheel_axis_y = new_steering_trf.basis.get_column(1),
+				.wheel_axis_z = new_steering_trf.basis.get_column(2),
                 .grounded_normal = highest_hit_world->ground_normal,
-                .ground_hit_position = highest_hit_world->ground_hit_position
+				.ground_hit_position = highest_hit_world->ground_hit_position,
+				.spring_displacement = force_result.compression
             };
         }
     }

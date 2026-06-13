@@ -38,10 +38,11 @@ class LNVehicleSuspensionSettings : public Resource {
     float rebound_fast_damp_rate = 2601.0f;
     float rebound_fast_damp_rate_threshold = 0.130f;
 
-    float toe_out = -0.00030f;
+	float toe_out = 0.0;
 
     // In degrees
     float static_camber_degrees = -1.6f;
+
 protected:
     struct WishboneSettings {
         Vector3 front;
@@ -51,8 +52,13 @@ protected:
     struct GeometrySettings {
         Vector3 strut_car;
         Vector3 strut_tyre;
+		Vector3 steering_rod_rack;
+		Vector3 steering_rod_hub;
     } geometry;
+
 public:
+	MAKE_SETTER_GETTER_VALUE(Vector3, steering_rod_rack, geometry.steering_rod_rack);
+	MAKE_SETTER_GETTER_VALUE(Vector3, steering_rod_hub, geometry.steering_rod_hub);
     MAKE_SETTER_GETTER_FLOAT_VALUE(bumpstop_up, bumpstop_up);
     MAKE_SETTER_GETTER_FLOAT_VALUE(bumpstop_down, bumpstop_down);
     MAKE_SETTER_GETTER_FLOAT_VALUE(packer_range, packer_range);
@@ -68,7 +74,6 @@ public:
     MAKE_SETTER_GETTER_FLOAT_VALUE(rebound_fast_damp_rate, rebound_fast_damp_rate);
     MAKE_SETTER_GETTER_FLOAT_VALUE(rebound_fast_damp_rate_threshold, rebound_fast_damp_rate_threshold);
 
-
     MAKE_SETTER_GETTER_FLOAT_VALUE(toe_out, toe_out);
     MAKE_SETTER_GETTER_FLOAT_VALUE(static_camber_degrees, static_camber_degrees);
 
@@ -76,16 +81,24 @@ public:
 
     static void _bind_methods();
 
-    virtual LNVehicleSuspensionState* create_suspension_state() const = 0;
+	virtual LNVehicleSuspensionState *create_suspension_state() const = 0;
 
     struct SuspensionSolveResult {
         bool success = false;
         bool grounded = false;
         Vector3 force_to_apply;
+		float total_force;
         Vector3 force_world_position;
         Transform3D wheel_transform;
+
+		Vector3 wheel_axis_x;
+		Vector3 wheel_axis_y;
+		Vector3 wheel_axis_z;
+
         Vector3 grounded_normal;
         Vector3 ground_hit_position;
+
+		float spring_displacement = 0.0f;
     };
-    virtual SuspensionSolveResult solve(Ref<LNVehicleWheelSettings> p_wheel_settings, LNVehicleWheelPosition p_wheel_position, const Node3D *p_vehicle, double p_delta, LNVehicleSuspensionState *p_state) = 0;
+	virtual SuspensionSolveResult solve(Ref<LNVehicleWheelSettings> p_wheel_settings, Vector3 p_tie_rod_rack_position_world, LNVehicleWheelPosition p_wheel_position, const Node3D *p_vehicle, double p_delta, LNVehicleSuspensionState *p_state) = 0;
 };

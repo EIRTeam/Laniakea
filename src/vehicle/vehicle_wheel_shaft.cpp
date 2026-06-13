@@ -3,15 +3,18 @@
 #include "godot_cpp/classes/physics_ray_query_parameters3d.hpp"
 #include "godot_cpp/classes/world3d.hpp"
 #include "godot_cpp/variant/transform3d.hpp"
+#include "godot_cpp/variant/utility_functions.hpp"
 #include "physics.h"
 #include "vehicle/debug_icons.h"
 #include "vehicle/shaft.h"
+#include "vehicle/steering_rack.h"
 #include "vehicle/vehicle.h"
 #include "vehicle/vehicle_suspension.h"
 #include "vehicle/vehicle_suspension_macpherson_settings.h"
 #include "vehicle/vehicle_suspension_settings.h"
 #include "vehicle/vehicle_wheel.h"
 #include "vehicle/vehicle_wheel_settings.h"
+#include "vehicle/wheel_position.h"
 
 Vector2 brush_gdsim(Vector2 p_slip, float p_contact_patch, float p_coefficient_of_friction, float p_tire_stiffness, float p_y_force) {
 	// float con_patch = 0.35f;
@@ -53,8 +56,6 @@ void LNVehicleWheelShaft::_process_wheel_grounded(const LNVehicleSuspensionSetti
 
     const Vector3 world_wheel_forward = wheel_get_world_forward(p_wheel_node, p_vehicle_node, p_input_state);
     const Vector3 world_wheel_right = wheel_get_world_right(p_wheel_node, p_vehicle_node, p_input_state);
-
-    //DebugOverlay::filled_arrow(p_wheel_node->get_global_position(), p_wheel_node->get_global_position() + world_wheel_right * 2.0f, 0.1f, Color(0.0, 1.0, 0.0));
 
     const float longitudinal_wheel_speed = contact_velocity.dot(world_wheel_forward);
     const float lateral_wheel_speed = contact_velocity.dot(world_wheel_right);
@@ -121,7 +122,7 @@ void LNVehicleWheelShaft::apply_downstream(const DownstreamData &p_data) {
     drive_reflected_inertia = p_data.reflected_inertia;
 }
 
-void LNVehicleWheelShaft::wheel_pre_update(float p_delta, const VehicleInputState &p_input_state, LNVehicle *p_vehicle, LNVehicleWheel *p_wheel_node) {
+void LNVehicleWheelShaft::wheel_pre_update(float p_delta, const Vector3 &p_rack_steer_rod_attachment_world, const VehicleInputState &p_input_state, LNVehicle *p_vehicle, LNVehicleWheel *p_wheel_node) {
     wheel_state.tire_force_lateral = 0.0f;
     wheel_state.tire_force_longitudinal = 0.0f;
 
@@ -137,16 +138,13 @@ void LNVehicleWheelShaft::wheel_pre_update(float p_delta, const VehicleInputStat
 
     const float wheel_sign = p_wheel_node->get_wheel_position() == WHEEL_RL || p_wheel_node->get_wheel_position() == WHEEL_FL ? 1.0f : -1.0f;
 
-    if (!suspension_trf_vehicle_local.has_value()) {
-        suspension_trf_vehicle_local = Transform3D();
-        suspension_trf_vehicle_local->basis = Basis().scaled(Vector3(wheel_sign, 1.0, 1.0));
-        suspension_trf_vehicle_local->origin = p_vehicle->to_local(p_wheel_node->get_global_position());
-    }
-
-    suspension_solver_state->suspension_transform_world = p_vehicle->get_global_transform() * (*suspension_trf_vehicle_local);
+	suspension_solver_state->suspension_transform_world = get_suspension_transform(p_vehicle, p_wheel_node);
     suspension_solver_state->steering_angle_rads = p_wheel_node->get_steerable() ? p_input_state.steer * Math::deg_to_rad(35.0f) : 0.0f;
+	suspension_solver_state->can_steer = p_wheel_node->get_steerable();
 
-    LNVehicleSuspensionSettings::SuspensionSolveResult solve_result = suspension_settings->solve(wheel_settings, p_wheel_node->get_wheel_position(), p_vehicle, p_delta, suspension_solver_state);
+	LNVehicleSuspensionSettings::SuspensionSolveResult solve_result = suspension_settings->solve(wheel_settings, p_rack_steer_rod_attachment_world, p_wheel_node->get_wheel_position(), p_vehicle, p_delta, suspension_solver_state);
+
+	suspension_state.compression = solve_result.spring_displacement;
 
     if (!solve_result.success) {
         // Something's fucked
@@ -226,4 +224,16 @@ LNVehicleShaft::UpstreamData LNVehicleWheelShaft::get_upstream_data() {
         .angular_velocity = wheel_state.angular_velocity,
         .net_reaction_torque = wheel_state.net_reaction_torque
     };
+}
+
+Transform3D LNVehicleWheelShaft::get_suspension_transform(const LNVehicle *p_vehicle_node, const LNVehicleWheel *p_wheel_node) const {
+	const float wheel_sign = p_wheel_node->get_wheel_position() == WHEEL_RL || p_wheel_node->get_wheel_position() == WHEEL_FL ? 1.0f : -1.0f;
+
+	if (!suspension_trf_vehicle_local.has_value()) {
+		suspension_trf_vehicle_local = Transform3D();
+		suspension_trf_vehicle_local->basis = Basis().scaled(Vector3(wheel_sign, 1.0, 1.0));
+		suspension_trf_vehicle_local->origin = p_vehicle_node->to_local(p_wheel_node->get_global_position());
+	}
+
+	return p_vehicle_node->get_global_transform() * (*suspension_trf_vehicle_local);
 }
