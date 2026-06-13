@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../bind_macros.h"
-#include "godot/property_list_helper.h"
 #include "godot_cpp/classes/resource.hpp"
 #include "vehicle_suspension_state.h"
 #include "wheel_position.h"

@@ -216,7 +216,6 @@ RemoveSemicolon: true
 # SpaceBeforeAssignmentOperators: true
 # SpaceBeforeCaseColon: false
 SpaceBeforeCpp11BracedList: true
-BreakAfterOpenBracketBracedList: true
 # SpaceBeforeCtorInitializerColon: true
 # SpaceBeforeInheritanceColon: true
 # SpaceBeforeJsonColon: false

@@ -6,6 +6,8 @@
 #include "shaders/multimesh_lod.glsl.gen.h"
 #include "terrain_generator/terrain_settings.h"
 
+#include <vector>
+
 class ScatterManager : public ChunkSpawner {
 	struct ScatterChunkElementInstance {
 		MultiMeshInstance3D *multimesh = nullptr;

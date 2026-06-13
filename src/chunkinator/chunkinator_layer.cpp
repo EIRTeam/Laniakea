@@ -19,12 +19,6 @@ Ref<ChunkinatorChunk> ChunkinatorLayer::get_chunk(int p_idx) const {
 	return chunks[p_idx];
 }
 
-Ref<ChunkinatorChunk> ChunkinatorLayer::get_chunk_in_position(const Vector2 &p_position) const {
-	Vector2i chunk_idx = (p_position / chunk_size).floor();
-	Ref<ChunkinatorChunk> chunk = get_chunk_by_index(chunk_idx);
-	return chunk;
-}
-
 int ChunkinatorLayer::get_chunk_count() const {
 	return chunks.size();
 }
