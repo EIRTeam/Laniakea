@@ -5,9 +5,7 @@
 #include "godot_cpp/core/math.hpp"
 #include "math.h"
 #include "vehicle/shaft.h"
-
-#include <algorithm>
-#include <functional>
+#include "vehicle/telemetry/vehicle_telemetry.h"
 
 float LNVehicleEngine::compute_crossfade_t(float p_value,
 		float p_lower_min,
@@ -73,6 +71,10 @@ void LNVehicleEngine::integrate_angular_velocity(float p_clutch_reaction_torque,
 	const float current_torque = output_torque + p_clutch_reaction_torque;
 	angular_velocity += (current_torque / (engine_settings->get_inertia() + p_extra_inertia)) * p_delta;
 	angular_velocity = MAX(angular_velocity, 0.0f);
+
+	if (telemetry != nullptr) {
+		telemetry->push_line_graph_data_channel_update("engine/rpm", "rpm", LNMath::AV_2_RPM * angular_velocity);
+	}
 
 	if (asp != nullptr) {
 		sound.set_sound_config(engine_settings->get_sound_config());
@@ -148,4 +150,16 @@ void LNVehicleEngine::_bind_methods() {
 
 String LNVehicleEngine::get_debugger_display_name() const {
 	return String::utf8(LNDebugIcons::ENGINE) + " " + get_name();
+}
+
+void LNVehicleEngine::initialize(VehicleTelemetry *p_telemetry) {
+	LNVehicleShaft::initialize(p_telemetry);
+	if (p_telemetry == nullptr) {
+		return;
+	}
+
+	p_telemetry->create_line_graph_data_channel("engine/rpm", 0.0f, 10000.0f, 300, Span<VehicleTelemetry::LineGraphSubchannelCreateInfo>({ VehicleTelemetry::LineGraphSubchannelCreateInfo {
+																						   .name = "rpm",
+																						   .display_name = "RPM",
+																				   } }));
 }

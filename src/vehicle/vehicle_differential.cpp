@@ -64,7 +64,6 @@ void LNVehicleDifferential::apply_downstream(const DownstreamData &p_data) {
 		float total_downstream_inertia = (p_data.reflected_inertia + differential_inertia) * (ratio * ratio);
 
 		inertia = total_downstream_inertia * 0.5f;
-	} else {
 	}
 
 	float total_torque = (p_data.torque * drivetrain_settings->get_final_ratio());

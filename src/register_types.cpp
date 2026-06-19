@@ -57,6 +57,9 @@
 #include "vehicle/engine_sound_import_plugin.h"
 #include "vehicle/shaft.h"
 #include "vehicle/suspension_test.h"
+#include "vehicle/telemetry/vehicle_telemetry_drawer.h"
+#include "vehicle/telemetry/vehicle_telemetry_drawer_line_graph.h"
+#include "vehicle/telemetry/vehicle_telemetry_window.h"
 #include "vehicle/vehicle.h"
 #include "vehicle/vehicle_differential.h"
 #include "vehicle/vehicle_drivetrain_config.h"
@@ -172,6 +175,9 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level) {
 	GDREGISTER_ABSTRACT_CLASS(LNVehicleWheelShaft);
 	GDREGISTER_CLASS(LNEngineSoundConfiguration);
 	GDREGISTER_CLASS(SuspensionTest);
+	GDREGISTER_ABSTRACT_CLASS(VehicleTelemetryDrawer);
+	GDREGISTER_CLASS(VehicleTelemetryDrawerLineGraph);
+	GDREGISTER_CLASS(VehicleTelemetryControl);
 }
 
 void uninitialize_gdextension_types(ModuleInitializationLevel p_level) {

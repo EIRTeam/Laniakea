@@ -8,6 +8,8 @@
 #include "godot_cpp/core/binder_common.hpp"
 #include "vehicle/clutch.h"
 #include "vehicle/shaft.h"
+#include "vehicle/telemetry/vehicle_telemetry.h"
+#include "vehicle/telemetry/vehicle_telemetry_window.h"
 #include "vehicle/vehicle_differential.h"
 #include "vehicle/vehicle_drivetrain_debugger.h"
 #include "vehicle/vehicle_engine.h"
@@ -32,7 +34,12 @@ public:
 	};
 
 	Window *debugger_window = nullptr;
-	LNVehicleDrivetrainDebugger *debugger = nullptr;
+
+#ifdef DEBUG_ENABLED
+	VehicleTelemetry telemetry;
+	VehicleTelemetryControl *telemetry_control = nullptr;
+#endif
+	LNVehicleDrivetrainDebugger *drivetrain_debugger = nullptr;
 
 	VehicleInputState input_state;
 	void _apply_arb(int p_wheel_left, int p_wheel_right, float p_arb_stiffness);
@@ -74,6 +81,7 @@ public:
 	int get_current_gear() const;
 	float get_wheel_slip_angle(LNVehicleWheelPosition p_wheel) const;
 	float get_wheel_slip_ratio(LNVehicleWheelPosition p_wheel) const;
+	float get_wheel_angular_velocity(LNVehicleWheelPosition p_wheel) const;
 	float get_engine_torque() const;
 	float get_engine_rpm() const;
 

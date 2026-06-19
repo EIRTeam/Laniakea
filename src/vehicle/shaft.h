@@ -5,6 +5,8 @@
 
 using namespace godot;
 
+class VehicleTelemetry;
+
 struct VehicleInputState {
 	float steer = 0.0f;
 	float throttle = 0.0f;
@@ -35,6 +37,7 @@ private:
 
 protected:
 	Ref<LNVehicleDrivetrainSettings> drivetrain_settings;
+	VehicleTelemetry *telemetry = nullptr;
 
 public:
 	virtual bool has_input() const = 0;
@@ -43,7 +46,8 @@ public:
 		return children[p_child_idx];
 	}
 
-	virtual void initialize() {
+	virtual void initialize(VehicleTelemetry *p_telemetry) {
+		telemetry = p_telemetry;
 		children.resize(get_output_count());
 		for (LNVehicleShaft *&shaft : children) {
 			shaft = nullptr;
@@ -71,6 +75,5 @@ public:
 	StringName get_name() const {
 		return name;
 	}
-
 	friend class LNVehicle;
 };

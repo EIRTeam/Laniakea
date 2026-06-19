@@ -249,3 +249,11 @@ Transform3D LNVehicleWheelShaft::get_suspension_transform(const LNVehicle *p_veh
 
 	return p_vehicle_node->get_global_transform() * (*suspension_trf_vehicle_local);
 }
+
+float LNVehicleWheelShaft::get_slip_ratio() const {
+	return wheel_state.slip_ratio;
+}
+
+float LNVehicleWheelShaft::get_slip_angle() const {
+	return wheel_state.slip_angle;
+}

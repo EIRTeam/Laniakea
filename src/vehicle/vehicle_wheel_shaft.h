@@ -62,4 +62,6 @@ public:
 	void apply_arb(LNVehicle *p_vehicle, Ref<LNVehicleWheelShaft> p_other_wheel, float p_arb_stiffness);
 	static void _bind_methods() {}
 	virtual UpstreamData get_upstream_data() override;
+	float get_slip_ratio() const;
+	float get_slip_angle() const;
 };

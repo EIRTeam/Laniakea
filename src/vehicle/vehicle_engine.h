@@ -33,7 +33,7 @@ class LNVehicleEngine : public LNVehicleShaft {
 
 public:
 	MAKE_SETTER_GETTER_VALUE(Ref<LNVehicleEngineSettings>, engine_settings, engine_settings);
-
+	virtual void initialize(VehicleTelemetry *p_telemetry) override;
 	void update_output_torque(float p_throttle, double p_delta);
 	void integrate_angular_velocity(float p_clutch_reaction_torque, float p_extra_inertia, double p_delta);
 	void set_rpm(float p_rpm);

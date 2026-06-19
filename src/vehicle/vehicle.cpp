@@ -9,6 +9,7 @@
 #include "godot_cpp/classes/physics_direct_space_state3d.hpp"
 #include "godot_cpp/classes/physics_ray_query_parameters3d.hpp"
 #include "godot_cpp/classes/rigid_body3d.hpp"
+#include "godot_cpp/classes/tab_container.hpp"
 #include "godot_cpp/classes/world3d.hpp"
 #include "godot_cpp/core/error_macros.hpp"
 #include "godot_cpp/core/math_defs.hpp"
@@ -16,6 +17,8 @@
 #include "math.h"
 #include "vehicle/shaft.h"
 #include "vehicle/steering_rack.h"
+#include "vehicle/telemetry/vehicle_telemetry.h"
+#include "vehicle/telemetry/vehicle_telemetry_window.h"
 #include "vehicle/vehicle_drivetrain_debugger.h"
 #include "vehicle/vehicle_wheel_shaft.h"
 #include "vehicle/wheel_position.h"
@@ -23,6 +26,7 @@
 #include "vehicle_wheel.h"
 #include "vehicle_wheel_settings.h"
 
+#include <array>
 #include <cfenv>
 #include <queue>
 
@@ -195,8 +199,26 @@ void LNVehicle::_physics_process(double p_delta) {
 	// Finally, apply ARBs
 	wheels[WHEEL_FL].shaft->apply_arb(this, wheels[WHEEL_FR].shaft, vehicle_settings->get_front_arb_stiffness());
 	wheels[WHEEL_RL].shaft->apply_arb(this, wheels[WHEEL_RR].shaft, vehicle_settings->get_rear_arb_stiffness());
+#ifdef DEBUG_ENABLED
+	telemetry.push_line_graph_data_channel_update("speed", "speed", get_linear_velocity().length() * 3.6f);
 
-	debugger->update();
+	telemetry.push_line_graph_data_channel_update("tyres/slip_ratio", "slip_ratio_fl", get_wheel_slip_ratio(LNVehicleWheelPosition::WHEEL_FL));
+	telemetry.push_line_graph_data_channel_update("tyres/slip_ratio", "slip_ratio_fr", get_wheel_slip_ratio(LNVehicleWheelPosition::WHEEL_FR));
+	telemetry.push_line_graph_data_channel_update("tyres/slip_ratio", "slip_ratio_rl", get_wheel_slip_ratio(LNVehicleWheelPosition::WHEEL_RL));
+	telemetry.push_line_graph_data_channel_update("tyres/slip_ratio", "slip_ratio_rr", get_wheel_slip_ratio(LNVehicleWheelPosition::WHEEL_RR));
+
+	telemetry.push_line_graph_data_channel_update("tyres/slip_angle", "slip_angle_fl", Math::rad_to_deg(get_wheel_slip_angle(LNVehicleWheelPosition::WHEEL_FL)));
+	telemetry.push_line_graph_data_channel_update("tyres/slip_angle", "slip_angle_fr", Math::rad_to_deg(get_wheel_slip_angle(LNVehicleWheelPosition::WHEEL_FR)));
+	telemetry.push_line_graph_data_channel_update("tyres/slip_angle", "slip_angle_rl", Math::rad_to_deg(get_wheel_slip_angle(LNVehicleWheelPosition::WHEEL_RL)));
+	telemetry.push_line_graph_data_channel_update("tyres/slip_angle", "slip_angle_rr", Math::rad_to_deg(get_wheel_slip_angle(LNVehicleWheelPosition::WHEEL_RR)));
+
+	telemetry.push_line_graph_data_channel_update("tyres/wheel_angular_velocity", "angular_velocity_fl", get_wheel_angular_velocity(LNVehicleWheelPosition::WHEEL_FL));
+	telemetry.push_line_graph_data_channel_update("tyres/wheel_angular_velocity", "angular_velocity_fr", get_wheel_angular_velocity(LNVehicleWheelPosition::WHEEL_FR));
+	telemetry.push_line_graph_data_channel_update("tyres/wheel_angular_velocity", "angular_velocity_rl", get_wheel_angular_velocity(LNVehicleWheelPosition::WHEEL_RL));
+	telemetry.push_line_graph_data_channel_update("tyres/wheel_angular_velocity", "angular_velocity_rr", get_wheel_angular_velocity(LNVehicleWheelPosition::WHEEL_RR));
+	telemetry_control->update(&telemetry);
+#endif
+	drivetrain_debugger->update();
 }
 
 void LNVehicle::_debug_draw() {
@@ -269,16 +291,19 @@ int LNVehicle::get_current_gear() const {
 	return gearbox->get_current_gear();
 }
 
+float LNVehicle::get_wheel_angular_velocity(LNVehicleWheelPosition p_wheel) const {
+	ERR_FAIL_INDEX_V(p_wheel, wheels.size(), 0.0f);
+	return wheels[p_wheel].shaft->get_upstream_data().angular_velocity;
+}
 float LNVehicle::get_wheel_slip_angle(LNVehicleWheelPosition p_wheel) const {
 	ERR_FAIL_INDEX_V(p_wheel, wheels.size(), 0.0f);
 	//return wheels[p_wheel].slip_angle;
-	return 0.0f;
+	return wheels[p_wheel].shaft->get_slip_angle();
 }
 
 float LNVehicle::get_wheel_slip_ratio(LNVehicleWheelPosition p_wheel) const {
 	ERR_FAIL_INDEX_V(p_wheel, wheels.size(), 0.0f);
-	//return wheels[p_wheel].slip_ratio;
-	return 0.0f;
+	return wheels[p_wheel].shaft->get_slip_ratio();
 }
 
 float LNVehicle::get_engine_torque() const {
@@ -295,7 +320,11 @@ void LNVehicle::add_shaft(StringName p_name, Ref<LNVehicleShaft> p_shaft) {
 
 	p_shaft->name = p_name;
 	shafts.insert(p_name, p_shaft);
-	p_shaft->initialize();
+#ifdef DEBUG_ENABLED
+	p_shaft->initialize(&telemetry);
+#else
+	p_shaft->initialize(nullptr);
+#endif
 	p_shaft->drivetrain_settings = get_vehicle_settings()->get_drivetrain_settings();
 }
 
@@ -345,27 +374,68 @@ void LNVehicle::connect_shaft(StringName p_from, StringName p_to, int p_output) 
 }
 
 void LNVehicle::_ready() {
-	/*float longitudinal_stiffness = 10000.0f;  // Cs — N per unit slip ratio
-	float cornering_stiffness    = 10000.0f;  // Ca — N per radian of slip angle
-	float friction_coefficient   = 0.85f;      // μ  — peak friction, scales with load
+#ifdef DEBUG_ENABLED
+	telemetry.create_line_graph_data_channel("speed", 0, 100, 300, Span<VehicleTelemetry::LineGraphSubchannelCreateInfo>({ VehicleTelemetry::LineGraphSubchannelCreateInfo {
+																		   .name = "speed",
+																		   .display_name = "Speed (km/h)",
+																   } }));
 
-	const float vertical_force = (get_mass() / 4.0f) * 9.81f;
+	telemetry.create_line_graph_data_channel("tyres/slip_ratio", -6.0f, 6.0f, 300, Span<VehicleTelemetry::LineGraphSubchannelCreateInfo>({
+																						   VehicleTelemetry::LineGraphSubchannelCreateInfo {
+																								   .name = "slip_ratio_fl",
+																								   .display_name = "Slip Ratio FL",
+																						   },
+																						   VehicleTelemetry::LineGraphSubchannelCreateInfo {
+																								   .name = "slip_ratio_fr",
+																								   .display_name = "Slip Ratio FR",
+																						   },
+																						   VehicleTelemetry::LineGraphSubchannelCreateInfo {
+																								   .name = "slip_ratio_rl",
+																								   .display_name = "Slip Ratio RL",
+																						   },
+																						   VehicleTelemetry::LineGraphSubchannelCreateInfo {
+																								   .name = "slip_ratio_rr",
+																								   .display_name = "Slip Ratio RR",
+																						   },
+																				   }));
+	telemetry.create_line_graph_data_channel("tyres/slip_angle", -90.0f, 90.0f, 300, Span<VehicleTelemetry::LineGraphSubchannelCreateInfo>({
+																							 VehicleTelemetry::LineGraphSubchannelCreateInfo {
+																									 .name = "slip_angle_fl",
+																									 .display_name = "Slip Angle FL",
+																							 },
+																							 VehicleTelemetry::LineGraphSubchannelCreateInfo {
+																									 .name = "slip_angle_fr",
+																									 .display_name = "Slip Angle FR",
+																							 },
+																							 VehicleTelemetry::LineGraphSubchannelCreateInfo {
+																									 .name = "slip_angle_rl",
+																									 .display_name = "Slip Angle RL",
+																							 },
+																							 VehicleTelemetry::LineGraphSubchannelCreateInfo {
+																									 .name = "slip_angle_rr",
+																									 .display_name = "Slip Angle RR",
+																							 },
+																					 }));
 
-	float slip_angle_max = Math::deg_to_rad(15.0f);
-
-	static constexpr int count = 128;
-
-	Ref<FileAccess> fa = FileAccess::open("user://dump.json", FileAccess::WRITE);
-
-	fa->store_line("DATA = [");
-	for (int i = -(count/2); i <= ((count / 2)); i++) {
-		float angle = (i / static_cast<float>(count/2.0f)) * slip_angle_max;
-		Vector2 tire_forces = brush_gdsim(Vector2(angle, 0.0f), 0.35f, friction_coefficient, 0.5f, vertical_force);
-
-		float normalized_force = tire_forces.x / vertical_force;
-		fa->store_line(vformat("\t(%.4f, %.4f),", Math::rad_to_deg(angle), normalized_force));
-	}
-	fa->store_line("]");*/
+	telemetry.create_line_graph_data_channel("tyres/wheel_angular_velocity", -150.0f, 150.0f, 300, Span<VehicleTelemetry::LineGraphSubchannelCreateInfo>({
+																										   VehicleTelemetry::LineGraphSubchannelCreateInfo {
+																												   .name = "angular_velocity_fl",
+																												   .display_name = "Angular Velocity FL",
+																										   },
+																										   VehicleTelemetry::LineGraphSubchannelCreateInfo {
+																												   .name = "angular_velocity_fr",
+																												   .display_name = "Angular Velocity FR",
+																										   },
+																										   VehicleTelemetry::LineGraphSubchannelCreateInfo {
+																												   .name = "angular_velocity_rl",
+																												   .display_name = "Angular Velocity RL",
+																										   },
+																										   VehicleTelemetry::LineGraphSubchannelCreateInfo {
+																												   .name = "angular_velocity_rr",
+																												   .display_name = "Angular Velocity RR",
+																										   },
+																								   }));
+#endif
 }
 
 LNVehicle::LNVehicle() {
@@ -382,9 +452,21 @@ void LNVehicle::_notification(int p_what) {
 			debugger_window->set_size(get_window()->get_size());
 			debugger_window->set_force_native(true);
 			add_child(debugger_window);
-			debugger = memnew(LNVehicleDrivetrainDebugger);
-			debugger_window->add_child(debugger);
-			debugger->set_anchors_and_offsets_preset(Control::PRESET_FULL_RECT);
+
+			drivetrain_debugger = memnew(LNVehicleDrivetrainDebugger);
+			drivetrain_debugger->set_anchors_and_offsets_preset(Control::PRESET_FULL_RECT);
+			drivetrain_debugger->set_name("Drivetrain");
+
+			TabContainer *tab_container = memnew(TabContainer);
+			tab_container->set_anchors_and_offsets_preset(Control::PRESET_FULL_RECT);
+
+			debugger_window->add_child(tab_container);
+
+			telemetry_control = memnew(VehicleTelemetryControl);
+			telemetry_control->set_name("Telemetry");
+
+			tab_container->add_child(drivetrain_debugger);
+			tab_container->add_child(telemetry_control);
 
 			const StringName GEARBOX_NAME = StringName("Gearbox");
 			const StringName DIFF_NAME = StringName("Differential");
@@ -433,7 +515,7 @@ void LNVehicle::_notification(int p_what) {
 			connect_shaft(DIFF_NAME, WHEEL_NAMES[WHEEL_RL], 0);
 			connect_shaft(DIFF_NAME, WHEEL_NAMES[WHEEL_RR], 1);
 
-			callable_mp(debugger, &LNVehicleDrivetrainDebugger::update_tree).call_deferred(this);
+			callable_mp(drivetrain_debugger, &LNVehicleDrivetrainDebugger::update_tree).call_deferred(this);
 		};
 	}
 }
