@@ -1,5 +1,7 @@
 #include "vehicle_telemetry.h"
 
+#include "godot_cpp/core/print_string.hpp"
+
 void VehicleTelemetry::create_data_channel(StringName p_channel_name, TelemetryChannelType p_type) {
 	channel_names.insert(p_channel_name);
 }

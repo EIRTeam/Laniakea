@@ -98,11 +98,15 @@ void VehicleTelemetryDrawerLineGraph::_notification(int p_what) {
 				DEV_ASSERT(draw_data.draw_points.size() == draw_data.values.size());
 				for (int64_t i = 0; i < draw_data.values.size(); i++) {
 					draw_pos_ptrw[i].x = (i / static_cast<float>(draw_data.values.size() - 1)) * graph_rect.size.x;
-					draw_pos_ptrw[i].y = (1.0f - Math::inverse_lerp(min_y, max_y, draw_data.values[i])) * graph_rect.size.y;
+					draw_pos_ptrw[i].y = (1.0f - Math::inverse_lerp(min_y, max_y, draw_data.values[i]));
+					draw_pos_ptrw[i].y = Math::clamp(draw_pos_ptrw[i].y, 0.0f, 1.0f);
+					draw_pos_ptrw[i].y *= graph_rect.size.y;
 					draw_pos_ptrw[i] += graph_rect.position;
 				}
 
 				draw_polyline(draw_data.draw_points, draw_data.color, 2.0f, true);
+
+				draw_string(get_theme_default_font(), draw_data.draw_points[draw_data.draw_points.size() - 1], vformat("%.2f", draw_data.values[draw_data.values.size() - 1]));
 			}
 			draw_line(graph_rect.position, graph_rect.position + Vector2(0.0f, graph_rect.size.y), Color("White"), 2.0f);
 			draw_line(graph_rect.position + Vector2(0.0f, graph_rect.size.y), graph_rect.position + graph_rect.size, Color("White"), 2.0f);
