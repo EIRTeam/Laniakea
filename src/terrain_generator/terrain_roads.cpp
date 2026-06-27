@@ -9,7 +9,6 @@
 #include "segment_quadtree.h"
 #include "terrain_generator/random_point_scatter.h"
 #include "terrain_generator/terrain_heightmap.h"
-#include "tracy/Tracy.hpp"
 
 #include <limits>
 
@@ -25,7 +24,7 @@ Ref<ChunkinatorChunk> TerrainRoadConnectionLayer::instantiate_chunk() {
 }
 
 Vector<Vector2> TerrainRoadConnectionLayer::get_points_in_radius(Vector2 p_position, float p_radius) const {
-	ZoneScoped;
+	FuncProfile;
 	Ref<RandomPointLayer> layer = get_layer("Road Random Points");
 	Vector<Vector2> points = layer->get_points_in_bounds(Rect2(p_position - Vector2(p_radius, p_radius), Vector2(p_radius, p_radius)));
 	const float radius_squared = p_radius * p_radius;

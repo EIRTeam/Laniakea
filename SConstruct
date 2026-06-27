@@ -29,12 +29,18 @@ opts.Add(
         key="project_dir",
         help="Path to a project dir to copy the final binaries to",
         default=localEnv.get("project_dir", None),
+    ),
+    PathVariable(
+        key="tracy_dir",
+        help="Path to where tracy is located",
+        default=None,
     )
 )
 
 opts.Update(localEnv)
 
 projectdir = ARGUMENTS.get("project_dir", None)
+tracy_dir = ARGUMENTS.get("tracy_dir", None)
 
 Help(opts.GenerateHelpText(localEnv))
 
@@ -72,7 +78,11 @@ sources += Glob("src/vehicle/*.cpp")
 sources += Glob("src/vehicle/telemetry/*.cpp")
 sources += Glob("src/game/turret/*.cpp")
 sources += Glob("src/game/rexbot/*.cpp")
-sources.append("/mnt/data_drive/porter/tracy/public/TracyClient.cpp")
+
+if tracy_dir is not None:
+    env.Append(CPPDEFINES=["TRACY_ENABLE"])
+    env.Append(CPPPATH=[f"{tracy_dir}/public"])
+    sources.append(f"{tracy_dir}/public/TracyClient.cpp")
 
 env.Append(BUILDERS=GLSL_BUILDERS)
 
@@ -134,9 +144,6 @@ if env.get("is_msvc", False):
     env.Append(CXXFLAGS=["/std:c++20"])
 else:
     env.Append(CXXFLAGS=["-std=c++20"])
-
-env.Append(CPPDEFINES=["TRACY_ENABLE"])
-env.Append(CPPPATH=["/mnt/data_drive/porter/tracy/public"])
 
 if projectdir != None:
     copy = env.Install("{}/bin/{}/".format(projectdir, env["platform"]), library)

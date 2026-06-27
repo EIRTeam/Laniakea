@@ -1,12 +1,10 @@
 #include "terrain_heightmap_combine_layer.h"
 
 #include "godot_cpp/core/error_macros.hpp"
-#include "godot_cpp/core/print_string.hpp"
 #include "profiling.h"
 #include "segment_quadtree.h"
 #include "terrain_generator/terrain_heightmap.h"
 #include "terrain_generator/terrain_roads.h"
-#include "tracy/Tracy.hpp"
 
 #include <limits>
 
