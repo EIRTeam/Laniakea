@@ -91,6 +91,27 @@ public:
 	LNVehicle();
 	void _notification(int p_what);
 
+	static String wheel_position_to_string(LNVehicleWheelPosition p_wheel_pos) {
+		switch (p_wheel_pos) {
+			case WHEEL_FL: {
+				return "fl";
+			} break;
+			case WHEEL_FR: {
+				return "fr";
+			} break;
+			case WHEEL_RL: {
+				return "rl";
+			} break;
+			case WHEEL_RR: {
+				return "rr";
+			} break;
+			case WHEEL_MAX: {
+				DEV_ASSERT(false);
+				return "";
+			} break;
+		}
+	}
+
 	friend class LNVehicleDrivetrainDebugger;
 };
 

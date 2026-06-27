@@ -1,5 +1,6 @@
 #include "vehicle_wheel_shaft.h"
 
+#include "debug/debug_overlay.h"
 #include "godot_cpp/classes/physics_direct_space_state3d.hpp"
 #include "godot_cpp/classes/physics_ray_query_parameters3d.hpp"
 #include "godot_cpp/classes/world3d.hpp"
@@ -13,6 +14,7 @@
 #include "vehicle/vehicle_suspension.h"
 #include "vehicle/vehicle_suspension_macpherson_settings.h"
 #include "vehicle/vehicle_suspension_settings.h"
+#include "vehicle/vehicle_tyre.h"
 #include "vehicle/vehicle_wheel.h"
 #include "vehicle/vehicle_wheel_settings.h"
 #include "vehicle/wheel_position.h"
@@ -66,9 +68,11 @@ void LNVehicleWheelShaft::_process_wheel_grounded(const LNVehicleSuspensionSetti
 	calculate_transient_slip(p_wheel_node->get_wheel_settings(), Vector2(lateral_wheel_speed, longitudinal_wheel_speed), p_delta);
 
 	const float y_load = p_suspension_result.force_to_apply.dot(p_suspension_result.grounded_normal);
-	Vector2 tire_forces = brush_gdsim(Vector2(wheel_state.slip_angle, wheel_state.slip_ratio), wheel_settings->get_contact_patch(), wheel_settings->get_coefficient_of_friction(), wheel_settings->get_stiffness(), y_load);
-	wheel_state.tire_force_longitudinal = tire_forces.y;
-	wheel_state.tire_force_lateral = tire_forces.x;
+	LNVehicleTyre::ForcesResult tyre_forces = wheel_settings->get_tyre()->forces(wheel_state.slip_ratio, Math::tan(-wheel_state.slip_angle), y_load);
+	telemetry->push_line_graph_data_channel_update("tyres/force_longitudinal", LNVehicle::wheel_position_to_string(p_wheel_node->get_wheel_position()), tyre_forces.longitudinal);
+	telemetry->push_line_graph_data_channel_update("tyres/force_lateral", LNVehicle::wheel_position_to_string(p_wheel_node->get_wheel_position()), tyre_forces.lateral);
+	wheel_state.tire_force_longitudinal = tyre_forces.longitudinal;
+	wheel_state.tire_force_lateral = tyre_forces.lateral;
 
 	// Fz: vertical (ground normal)
 	Vector3 Fz_dir = p_suspension_result.grounded_normal;
@@ -84,11 +88,29 @@ void LNVehicleWheelShaft::_process_wheel_grounded(const LNVehicleSuspensionSetti
 	DebugOverlay::line(p_suspension_result.ground_hit_position, p_suspension_result.ground_hit_position + Fz_dir, Color("GREEN"));
 	DebugOverlay::line(p_suspension_result.ground_hit_position, p_suspension_result.ground_hit_position + Fy_dir, Color("RED"));
 
-	Vector3 F_tire = -wheel_state.tire_force_longitudinal * Fx_dir + -wheel_state.tire_force_lateral * Fy_dir;
+	Vector3 F_tire = wheel_state.tire_force_longitudinal * Fx_dir + wheel_state.tire_force_lateral * Fy_dir;
 	Vector3 force_n_plane = F_tire - p_suspension_result.n_plane_normal * F_tire.dot(p_suspension_result.n_plane_normal);
 	const Vector3 force_pos = suspension_state.ground_hit_position;
 	DebugOverlay::filled_arrow(force_pos, force_pos + force_n_plane, 0.1f, Color("RED"));
 	DebugOverlay::filled_arrow(p_suspension_result.ground_hit_position, p_suspension_result.ground_hit_position + p_suspension_result.n_plane_normal, 0.1f, Color("YELLOW"));
+
+	const Plane ground_plane = Plane(p_suspension_result.grounded_normal, p_suspension_result.ground_hit_position);
+
+	Vector3 steering_axis_ground_intersection;
+	if (ground_plane.intersects_ray(p_suspension_result.steering_axis_origin, p_suspension_result.steering_axis_direction, &steering_axis_ground_intersection)) {
+		const Vector3 steering_proj_to_contact = p_suspension_result.ground_hit_position - steering_axis_ground_intersection;
+		const float mechanical_trail = steering_proj_to_contact.dot(Fx_dir);
+
+		DebugOverlay::sphere(steering_axis_ground_intersection, 0.1f, Color("YELLOW"));
+		telemetry->push_line_graph_data_channel_update("tyres/mechanical_trail", LNVehicle::wheel_position_to_string(p_wheel_node->get_wheel_position()), mechanical_trail);
+		const Vector3 mz_total = (tyre_forces.self_centering_torque + tyre_forces.lateral * mechanical_trail) * (Fz_dir);
+		float mz_about_axis = mz_total.dot(p_suspension_result.steering_axis_direction);
+		telemetry->push_line_graph_data_channel_update("tyres/self_aligning_torque", LNVehicle::wheel_position_to_string(p_wheel_node->get_wheel_position()), mz_total.y);
+		p_vehicle_node->apply_torque(mz_total);
+	} else {
+		ERR_PRINT("Failed to intersect ground plane from steering axis, bug?");
+	}
+
 	LNPhysics::apply_force(p_vehicle_node, force_n_plane, suspension_state.ground_hit_position - p_vehicle_node->get_global_position(), Color("RED"));
 }
 
@@ -109,7 +131,7 @@ void LNVehicleWheelShaft::calculate_transient_slip(Ref<LNVehicleWheelSettings> p
 	const float clamping_factor = 1.0f;
 
 	const Vector2 contact_patch_velocity = p_wheel_velocity;
-	const float wheel_radius = p_wheel_settings->get_radius();
+	const float wheel_radius = p_wheel_settings->get_tyre()->get_radius();
 	Vector2 slip_velocity = Vector2(contact_patch_velocity.x, wheel_state.angular_velocity * wheel_radius - contact_patch_velocity.y);
 	const float steady_state_slip_angle = Math::atan(slip_velocity.x / MAX(Math::abs(contact_patch_velocity.y), 1.0f));
 	const float slip_angle_delta = (p_delta / lateral_relaxation_length) * (slip_velocity.x - MAX(contact_patch_velocity.y, clamping_factor) * wheel_state.slip_angle);
@@ -161,6 +183,8 @@ void LNVehicleWheelShaft::wheel_pre_update(float p_delta, const Vector3 &p_rack_
 	LNVehicleSuspensionSettings::SuspensionSolveResult solve_result = suspension_settings->solve(wheel_settings, p_rack_steer_rod_attachment_world, p_wheel_node->get_wheel_position(), p_vehicle, p_delta, suspension_solver_state);
 
 	suspension_state.compression = solve_result.spring_displacement;
+	suspension_state.steering_axis_origin = solve_result.steering_axis_origin;
+	suspension_state.steering_axis_direction = solve_result.steering_axis_direction;
 
 	if (!solve_result.success) {
 		// Something's fucked
@@ -178,22 +202,28 @@ void LNVehicleWheelShaft::wheel_pre_update(float p_delta, const Vector3 &p_rack_
 		_process_wheel_grounded(solve_result, p_vehicle, p_wheel_node, p_input_state, p_delta);
 	}
 	const float wheel_mass = wheel_settings->get_mass();
-	const float wheel_radius = p_wheel_node->get_wheel_settings()->get_radius();
+
+	DEV_ASSERT(wheel_settings->get_tyre().is_valid());
+	Ref<LNVehicleTyre> tyre = wheel_settings->get_tyre();
+
+	const float wheel_radius = tyre->get_radius();
 	wheel_state.wheel_inertia = (0.5f * wheel_mass * wheel_radius * wheel_radius);
 
-	wheel_state.net_reaction_torque = wheel_state.tire_force_longitudinal * wheel_settings->get_radius();
+	wheel_state.net_reaction_torque = -wheel_state.tire_force_longitudinal * tyre->get_radius();
 	//p_wheel_node->set_global_transform(solve_result.wheel_transform);
 }
 
 void LNVehicleWheelShaft::wheel_post_update(float p_delta, const VehicleInputState &p_input_state, LNVehicle *p_vehicle, LNVehicleWheel *p_wheel_node) {
 	Ref<LNVehicleWheelSettings> wheel_settings = p_wheel_node->get_wheel_settings();
-	const float wheel_radius = wheel_settings->get_radius();
+	DEV_ASSERT(wheel_settings->get_tyre().is_valid());
+	Ref<LNVehicleTyre> tyre = wheel_settings->get_tyre();
+	const float wheel_radius = tyre->get_radius();
 	const Vector3 world_wheel_direction = p_vehicle->get_global_basis().xform(Vector3(0.0, -1.0, 0.0));
 	Ref<LNVehicleSuspensionSettings> suspension_settings = p_wheel_node->get_suspension_settings();
 
 	const float wheel_mass = wheel_settings->get_mass();
 
-	const float T_ext = drive_torque + wheel_state.tire_force_longitudinal * wheel_radius;
+	const float T_ext = drive_torque - wheel_state.tire_force_longitudinal * wheel_radius;
 
 	DEV_ASSERT(Math::is_finite(T_ext));
 	DEV_ASSERT(Math::is_finite(wheel_radius));
@@ -219,15 +249,21 @@ String LNVehicleWheelShaft::get_debug_text() const {
 }
 
 void LNVehicleWheelShaft::apply_arb(LNVehicle *p_vehicle, Ref<LNVehicleWheelShaft> p_other_wheel, float p_arb_stiffness) {
-	if (!suspension_state.grounded || !p_other_wheel->suspension_state.grounded) {
-		return;
-	}
+	// Within apply_arb:
+	// Use the exact structural unit vectors pointing from lower ball joint to top mount
+	Vector3 my_strut_axis = suspension_state.steering_axis_direction;
+	Vector3 other_strut_axis = p_other_wheel->suspension_state.steering_axis_direction;
 
+	// Apply forces at the top mount where the strut transmits load directly to the frame
+	Vector3 my_mount_pos = suspension_state.steering_axis_origin;
+	Vector3 other_mount_pos = p_other_wheel->suspension_state.steering_axis_origin;
+
+	Vector3 vehicle_com = p_vehicle->get_global_position();
+
+	// Apply the pure internal structural force along the calculated strut axis
 	const float arb_torque = p_arb_stiffness * ((-suspension_state.compression) - (-p_other_wheel->suspension_state.compression));
-
-	// Use contact normals, consistent with spring force
-	LNPhysics::apply_force(p_vehicle, -suspension_state.contact_normal * arb_torque, suspension_state.ground_hit_position - p_vehicle->get_global_position(), Color(1.0, 0.0, 0.0));
-	LNPhysics::apply_force(p_vehicle, p_other_wheel->suspension_state.contact_normal * arb_torque, p_other_wheel->suspension_state.ground_hit_position - p_vehicle->get_global_position(), Color(1.0, 0.0, 0.0));
+	LNPhysics::apply_force(p_vehicle, my_strut_axis * arb_torque, my_mount_pos - vehicle_com, Color(1.0, 0.0, 0.0));
+	LNPhysics::apply_force(p_vehicle, -other_strut_axis * arb_torque, other_mount_pos - vehicle_com, Color(1.0, 0.0, 0.0));
 }
 
 LNVehicleShaft::UpstreamData LNVehicleWheelShaft::get_upstream_data() {

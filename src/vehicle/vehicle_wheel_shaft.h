@@ -22,6 +22,8 @@ class LNVehicleWheelShaft : public LNVehicleShaft {
 		Vector3 ground_hit_position;
 		Vector3 contact_normal;
 		Transform3D wheel_transform;
+		Vector3 steering_axis_origin;
+		Vector3 steering_axis_direction;
 		float compression;
 	} suspension_state;
 

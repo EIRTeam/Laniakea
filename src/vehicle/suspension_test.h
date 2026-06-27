@@ -12,6 +12,7 @@
 #include "godot_cpp/variant/utility_functions.hpp"
 #include "math.h"
 #include "vehicle/steering_rack.h"
+#include "vehicle/tire_model_lastminute.h"
 #include "vehicle/vehicle_settings.h"
 #include "vehicle/vehicle_suspension.h"
 #include "vehicle/vehicle_suspension_macpherson_settings.h"
@@ -50,7 +51,10 @@ public:
 		state_left = settings->create_suspension_state();
 		state_right = settings->create_suspension_state();
 		wheel_settings.instantiate();
-		wheel_settings->set_radius(0.3f);
+		Ref<LNVehicleTyreLastMinute> tyre_model;
+		tyre_model.instantiate();
+		wheel_settings->set_tyre(tyre_model);
+		tyre_model->set_radius(0.3f);
 
 		vehicle_settings.instantiate();
 	}

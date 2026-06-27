@@ -99,6 +99,8 @@ public:
 		Vector3 n_plane_normal;
 
 		float spring_displacement = 0.0f;
+		Vector3 steering_axis_origin;
+		Vector3 steering_axis_direction;
 	};
 	virtual SuspensionSolveResult solve(Ref<LNVehicleWheelSettings> p_wheel_settings, Vector3 p_tie_rod_rack_position_world, LNVehicleWheelPosition p_wheel_position, const Node3D *p_vehicle, double p_delta, LNVehicleSuspensionState *p_state) = 0;
 };

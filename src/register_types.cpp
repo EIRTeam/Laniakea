@@ -60,6 +60,7 @@
 #include "vehicle/telemetry/vehicle_telemetry_drawer.h"
 #include "vehicle/telemetry/vehicle_telemetry_drawer_line_graph.h"
 #include "vehicle/telemetry/vehicle_telemetry_window.h"
+#include "vehicle/tire_model_lastminute.h"
 #include "vehicle/vehicle.h"
 #include "vehicle/vehicle_differential.h"
 #include "vehicle/vehicle_drivetrain_config.h"
@@ -166,6 +167,8 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level) {
 	GDREGISTER_ABSTRACT_CLASS(LNVehicleSuspensionSettings);
 	GDREGISTER_CLASS(LNVehicleMacPhersonSuspensionSettings);
 	GDREGISTER_CLASS(LNVehicle);
+	GDREGISTER_ABSTRACT_CLASS(LNVehicleTyre);
+	GDREGISTER_CLASS(LNVehicleTyreLastMinute);
 	GDREGISTER_CLASS(LNVehicleWheel);
 	GDREGISTER_CLASS(LNVehicleEngine);
 	GDREGISTER_ABSTRACT_CLASS(LNVehicleDifferential);

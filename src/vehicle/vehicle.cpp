@@ -19,6 +19,7 @@
 #include "vehicle/steering_rack.h"
 #include "vehicle/telemetry/vehicle_telemetry.h"
 #include "vehicle/telemetry/vehicle_telemetry_window.h"
+#include "vehicle/tire_model_lastminute.h"
 #include "vehicle/vehicle_drivetrain_debugger.h"
 #include "vehicle/vehicle_wheel_shaft.h"
 #include "vehicle/wheel_position.h"
@@ -202,20 +203,20 @@ void LNVehicle::_physics_process(double p_delta) {
 #ifdef DEBUG_ENABLED
 	telemetry.push_line_graph_data_channel_update("speed", "speed", get_linear_velocity().length() * 3.6f);
 
-	telemetry.push_line_graph_data_channel_update("tyres/slip_ratio", "slip_ratio_fl", get_wheel_slip_ratio(LNVehicleWheelPosition::WHEEL_FL));
-	telemetry.push_line_graph_data_channel_update("tyres/slip_ratio", "slip_ratio_fr", get_wheel_slip_ratio(LNVehicleWheelPosition::WHEEL_FR));
-	telemetry.push_line_graph_data_channel_update("tyres/slip_ratio", "slip_ratio_rl", get_wheel_slip_ratio(LNVehicleWheelPosition::WHEEL_RL));
-	telemetry.push_line_graph_data_channel_update("tyres/slip_ratio", "slip_ratio_rr", get_wheel_slip_ratio(LNVehicleWheelPosition::WHEEL_RR));
+	telemetry.push_line_graph_data_channel_update("tyres/slip_ratio", "fl", get_wheel_slip_ratio(LNVehicleWheelPosition::WHEEL_FL));
+	telemetry.push_line_graph_data_channel_update("tyres/slip_ratio", "fr", get_wheel_slip_ratio(LNVehicleWheelPosition::WHEEL_FR));
+	telemetry.push_line_graph_data_channel_update("tyres/slip_ratio", "rl", get_wheel_slip_ratio(LNVehicleWheelPosition::WHEEL_RL));
+	telemetry.push_line_graph_data_channel_update("tyres/slip_ratio", "rr", get_wheel_slip_ratio(LNVehicleWheelPosition::WHEEL_RR));
 
-	telemetry.push_line_graph_data_channel_update("tyres/slip_angle", "slip_angle_fl", Math::rad_to_deg(get_wheel_slip_angle(LNVehicleWheelPosition::WHEEL_FL)));
-	telemetry.push_line_graph_data_channel_update("tyres/slip_angle", "slip_angle_fr", Math::rad_to_deg(get_wheel_slip_angle(LNVehicleWheelPosition::WHEEL_FR)));
-	telemetry.push_line_graph_data_channel_update("tyres/slip_angle", "slip_angle_rl", Math::rad_to_deg(get_wheel_slip_angle(LNVehicleWheelPosition::WHEEL_RL)));
-	telemetry.push_line_graph_data_channel_update("tyres/slip_angle", "slip_angle_rr", Math::rad_to_deg(get_wheel_slip_angle(LNVehicleWheelPosition::WHEEL_RR)));
+	telemetry.push_line_graph_data_channel_update("tyres/slip_angle", "fl", Math::rad_to_deg(get_wheel_slip_angle(LNVehicleWheelPosition::WHEEL_FL)));
+	telemetry.push_line_graph_data_channel_update("tyres/slip_angle", "fr", Math::rad_to_deg(get_wheel_slip_angle(LNVehicleWheelPosition::WHEEL_FR)));
+	telemetry.push_line_graph_data_channel_update("tyres/slip_angle", "rl", Math::rad_to_deg(get_wheel_slip_angle(LNVehicleWheelPosition::WHEEL_RL)));
+	telemetry.push_line_graph_data_channel_update("tyres/slip_angle", "rr", Math::rad_to_deg(get_wheel_slip_angle(LNVehicleWheelPosition::WHEEL_RR)));
 
-	telemetry.push_line_graph_data_channel_update("tyres/wheel_angular_velocity", "angular_velocity_fl", get_wheel_angular_velocity(LNVehicleWheelPosition::WHEEL_FL));
-	telemetry.push_line_graph_data_channel_update("tyres/wheel_angular_velocity", "angular_velocity_fr", get_wheel_angular_velocity(LNVehicleWheelPosition::WHEEL_FR));
-	telemetry.push_line_graph_data_channel_update("tyres/wheel_angular_velocity", "angular_velocity_rl", get_wheel_angular_velocity(LNVehicleWheelPosition::WHEEL_RL));
-	telemetry.push_line_graph_data_channel_update("tyres/wheel_angular_velocity", "angular_velocity_rr", get_wheel_angular_velocity(LNVehicleWheelPosition::WHEEL_RR));
+	telemetry.push_line_graph_data_channel_update("tyres/wheel_angular_velocity", "fl", get_wheel_angular_velocity(LNVehicleWheelPosition::WHEEL_FL));
+	telemetry.push_line_graph_data_channel_update("tyres/wheel_angular_velocity", "fr", get_wheel_angular_velocity(LNVehicleWheelPosition::WHEEL_FR));
+	telemetry.push_line_graph_data_channel_update("tyres/wheel_angular_velocity", "rl", get_wheel_angular_velocity(LNVehicleWheelPosition::WHEEL_RL));
+	telemetry.push_line_graph_data_channel_update("tyres/wheel_angular_velocity", "rr", get_wheel_angular_velocity(LNVehicleWheelPosition::WHEEL_RR));
 	telemetry_control->update(&telemetry);
 #endif
 	drivetrain_debugger->update();
@@ -328,6 +329,27 @@ void LNVehicle::add_shaft(StringName p_name, Ref<LNVehicleShaft> p_shaft) {
 	p_shaft->drivetrain_settings = get_vehicle_settings()->get_drivetrain_settings();
 }
 
+static void create_per_wheel_telemetry_channel(VehicleTelemetry *p_telemetry, StringName p_channel_name, float p_min, float p_max) {
+	p_telemetry->create_line_graph_data_channel(p_channel_name, p_min, p_max, 300, Span<VehicleTelemetry::LineGraphSubchannelCreateInfo>({
+																						   VehicleTelemetry::LineGraphSubchannelCreateInfo {
+																								   .name = "fl",
+																								   .display_name = "FL",
+																						   },
+																						   VehicleTelemetry::LineGraphSubchannelCreateInfo {
+																								   .name = "fr",
+																								   .display_name = "FR",
+																						   },
+																						   VehicleTelemetry::LineGraphSubchannelCreateInfo {
+																								   .name = "rl",
+																								   .display_name = "RL",
+																						   },
+																						   VehicleTelemetry::LineGraphSubchannelCreateInfo {
+																								   .name = "rr",
+																								   .display_name = "RR",
+																						   },
+																				   }));
+}
+
 void LNVehicle::connect_shaft(StringName p_from, StringName p_to, int p_output) {
 	auto from_it = shafts.find(p_from);
 	ERR_FAIL_COND_MSG(
@@ -380,61 +402,34 @@ void LNVehicle::_ready() {
 																		   .display_name = "Speed (km/h)",
 																   } }));
 
-	telemetry.create_line_graph_data_channel("tyres/slip_ratio", -6.0f, 6.0f, 300, Span<VehicleTelemetry::LineGraphSubchannelCreateInfo>({
-																						   VehicleTelemetry::LineGraphSubchannelCreateInfo {
-																								   .name = "slip_ratio_fl",
-																								   .display_name = "Slip Ratio FL",
-																						   },
-																						   VehicleTelemetry::LineGraphSubchannelCreateInfo {
-																								   .name = "slip_ratio_fr",
-																								   .display_name = "Slip Ratio FR",
-																						   },
-																						   VehicleTelemetry::LineGraphSubchannelCreateInfo {
-																								   .name = "slip_ratio_rl",
-																								   .display_name = "Slip Ratio RL",
-																						   },
-																						   VehicleTelemetry::LineGraphSubchannelCreateInfo {
-																								   .name = "slip_ratio_rr",
-																								   .display_name = "Slip Ratio RR",
-																						   },
-																				   }));
-	telemetry.create_line_graph_data_channel("tyres/slip_angle", -90.0f, 90.0f, 300, Span<VehicleTelemetry::LineGraphSubchannelCreateInfo>({
-																							 VehicleTelemetry::LineGraphSubchannelCreateInfo {
-																									 .name = "slip_angle_fl",
-																									 .display_name = "Slip Angle FL",
-																							 },
-																							 VehicleTelemetry::LineGraphSubchannelCreateInfo {
-																									 .name = "slip_angle_fr",
-																									 .display_name = "Slip Angle FR",
-																							 },
-																							 VehicleTelemetry::LineGraphSubchannelCreateInfo {
-																									 .name = "slip_angle_rl",
-																									 .display_name = "Slip Angle RL",
-																							 },
-																							 VehicleTelemetry::LineGraphSubchannelCreateInfo {
-																									 .name = "slip_angle_rr",
-																									 .display_name = "Slip Angle RR",
-																							 },
-																					 }));
+	create_per_wheel_telemetry_channel(&telemetry, "tyres/slip_ratio", -2.0f, 2.0f);
+	create_per_wheel_telemetry_channel(&telemetry, "tyres/slip_angle", -90.0f, 90.0f);
+	create_per_wheel_telemetry_channel(&telemetry, "tyres/wheel_angular_velocity", -150.0f, 150.0f);
+	create_per_wheel_telemetry_channel(&telemetry, "tyres/mechanical_trail", -0.5f, 0.5f);
+	create_per_wheel_telemetry_channel(&telemetry, "tyres/self_aligning_torque", -100.0f, 100.0f);
+	create_per_wheel_telemetry_channel(&telemetry, "tyres/force_longitudinal", -350.0f, 350.0f);
+	create_per_wheel_telemetry_channel(&telemetry, "tyres/force_lateral", -350.0f, 350.0f);
+	telemetry.create_line_graph_data_channel("tyre_test", -1.25, 1.25, 300, Span<VehicleTelemetry::LineGraphSubchannelCreateInfo>({ VehicleTelemetry::LineGraphSubchannelCreateInfo { .name = "normalized_longitudinal_tire_force" }, VehicleTelemetry::LineGraphSubchannelCreateInfo { .name = "normalized_lateral_tire_force" }, VehicleTelemetry::LineGraphSubchannelCreateInfo { .name = "self_centering_torque" } }));
 
-	telemetry.create_line_graph_data_channel("tyres/wheel_angular_velocity", -150.0f, 150.0f, 300, Span<VehicleTelemetry::LineGraphSubchannelCreateInfo>({
-																										   VehicleTelemetry::LineGraphSubchannelCreateInfo {
-																												   .name = "angular_velocity_fl",
-																												   .display_name = "Angular Velocity FL",
-																										   },
-																										   VehicleTelemetry::LineGraphSubchannelCreateInfo {
-																												   .name = "angular_velocity_fr",
-																												   .display_name = "Angular Velocity FR",
-																										   },
-																										   VehicleTelemetry::LineGraphSubchannelCreateInfo {
-																												   .name = "angular_velocity_rl",
-																												   .display_name = "Angular Velocity RL",
-																										   },
-																										   VehicleTelemetry::LineGraphSubchannelCreateInfo {
-																												   .name = "angular_velocity_rr",
-																												   .display_name = "Angular Velocity RR",
-																										   },
-																								   }));
+	Ref<LNVehicleTyreLastMinute> last_minute;
+	last_minute.instantiate();
+
+	constexpr int ITERATION_COUNT = 300;
+	const float vertical_load = 2500.0f;
+	for (int i = 0; i < ITERATION_COUNT; i++) {
+		const float x_norm = (i / static_cast<float>(ITERATION_COUNT - 1)) * 2.0f - 1.0f;
+		const float slip_ratio = x_norm * 2.0f;
+		LNVehicleTyreLastMinute::ForcesResult result = last_minute->forces(slip_ratio, 0.0, vertical_load);
+		telemetry.push_line_graph_data_channel_update("tyre_test", "normalized_longitudinal_tire_force", result.longitudinal / vertical_load);
+
+		const float slip_angle = Math::tan(Math::deg_to_rad(10.0f * x_norm * 2.0f));
+		LNVehicleTyreLastMinute::ForcesResult result_lat = last_minute->forces(0.0f, slip_angle, vertical_load);
+		telemetry.push_line_graph_data_channel_update("tyre_test", "normalized_lateral_tire_force", result_lat.lateral / vertical_load);
+		const float pneumatic_trail = 0.01f;
+		const float mz_display = 50.0f * (result_lat.self_centering_torque + result_lat.lateral * pneumatic_trail) / vertical_load;
+		telemetry.push_line_graph_data_channel_update("tyre_test", "self_centering_torque", mz_display);
+	}
+
 #endif
 }
 

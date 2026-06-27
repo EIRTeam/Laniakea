@@ -210,8 +210,12 @@ LNVehicleSuspensionSettings::SuspensionSolveResult LNVehicleMacPhersonSuspension
 			.steering_axis_world = bottom_tyre_ball_joint_world.direction_to(strut_attachment_world),
 			.use_steering = state->can_steer });
 
-	const float tire_width = p_wheel_settings->get_width();
-	const float tire_radius = p_wheel_settings->get_radius();
+	DEV_ASSERT(p_wheel_settings->get_tyre().is_valid());
+
+	Ref<LNVehicleTyre> tyre = p_wheel_settings->get_tyre();
+
+	const float tire_width = tyre->get_width();
+	const float tire_radius = tyre->get_radius();
 
 	const Vector3 inner_rear_attachment_world = state->suspension_transform_world.xform(get_bottom_wishbone_rear());
 	const Vector3 inner_front_attachment_world = state->suspension_transform_world.xform(get_bottom_wishbone_front());
@@ -331,6 +335,8 @@ LNVehicleSuspensionSettings::SuspensionSolveResult LNVehicleMacPhersonSuspension
 
 		Vector3 n_plane_normal;
 
+		Vector3 shock_axis = new_steering_trf.origin.direction_to(strut_attachment_world);
+
 		// We need to calculate the n plane, the n plane only applies if we are grounded, as it's used for applying tyre forces.
 		if (highest_hit_world.has_value()) {
 			// try to find the front view IC
@@ -391,7 +397,6 @@ LNVehicleSuspensionSettings::SuspensionSolveResult LNVehicleMacPhersonSuspension
 				n_plane_normal = edge_a.cross(edge_b).normalized();
 			}
 
-			Vector3 shock_axis = new_steering_trf.origin.direction_to(strut_attachment_world);
 			// In real life, forces would get applied through
 			Vector3 force_to_apply = highest_hit_world->ground_normal * shock_axis.dot(highest_hit_world->ground_normal) * force_result.clamped_total_force;
 			return {
@@ -407,13 +412,28 @@ LNVehicleSuspensionSettings::SuspensionSolveResult LNVehicleMacPhersonSuspension
 				.grounded_normal = highest_hit_world->ground_normal,
 				.ground_hit_position = highest_hit_world->ground_hit_position,
 				.n_plane_normal = n_plane_normal,
-				.spring_displacement = force_result.compression
+				.spring_displacement = force_result.compression,
+				.steering_axis_origin = strut_attachment_world,
+				.steering_axis_direction = -shock_axis,
+			};
+		} else {
+			// Airborne
+			return {
+				.success = true,
+				.grounded = false,
+				.wheel_transform = Transform3D(new_steering_trf.basis, hub_pos_world),
+				.wheel_axis_x = new_steering_trf.basis.get_column(0),
+				.wheel_axis_y = new_steering_trf.basis.get_column(1),
+				.wheel_axis_z = new_steering_trf.basis.get_column(2),
+				.spring_displacement = force_result.compression,
+				.steering_axis_origin = strut_attachment_world,
+				.steering_axis_direction = -shock_axis,
 			};
 		}
 	}
 
 	return {
-		.success = true,
-		.grounded = false
+		.success = false,
+		.grounded = false,
 	};
 }
