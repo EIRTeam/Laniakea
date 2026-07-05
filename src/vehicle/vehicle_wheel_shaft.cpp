@@ -253,6 +253,10 @@ String LNVehicleWheelShaft::get_debug_text() const {
 }
 
 void LNVehicleWheelShaft::apply_arb(LNVehicle *p_vehicle, Ref<LNVehicleWheelShaft> p_other_wheel, float p_arb_stiffness) {
+	if (!suspension_state.grounded || !p_other_wheel->suspension_state.grounded) {
+		return;
+	}
+
 	// Within apply_arb:
 	// Use the exact structural unit vectors pointing from lower ball joint to top mount
 	Vector3 my_strut_axis = suspension_state.steering_axis_direction;
