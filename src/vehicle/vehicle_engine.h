@@ -1,12 +1,11 @@
 #pragma once
 
 #include "bind_macros.h"
-#include "godot_cpp/classes/audio_stream_playback_polyphonic.hpp"
 #include "godot_cpp/classes/audio_stream_player.hpp"
-#include "godot_cpp/classes/audio_stream_polyphonic.hpp"
 #include "vehicle/shaft.h"
 #include "vehicle/vehicle_engine_settings.h"
-#include "vehicle/vehicle_engine_sound.h"
+#include "vehicle/vehicle_engine_sound_stream.h"
+
 class LNVehicleEngine : public LNVehicleShaft {
 	GDCLASS(LNVehicleEngine, LNVehicleShaft);
 	Ref<LNVehicleEngineSettings> engine_settings;
@@ -17,10 +16,8 @@ class LNVehicleEngine : public LNVehicleShaft {
 	float next_limiter_bounce = 0.0f;
 	float effective_throttle = 0.0f;
 
-	Ref<AudioStreamPolyphonic> audio_stream;
+	Ref<LNVehicleEngineSoundStream> audio_stream;
 	AudioStreamPlayer *asp = nullptr;
-
-	VehicleEngineSound sound;
 
 	float compute_crossfade_t(float p_value,
 			float lower_min,

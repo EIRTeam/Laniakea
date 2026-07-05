@@ -6,6 +6,7 @@
 #include "math.h"
 #include "vehicle/shaft.h"
 #include "vehicle/telemetry/vehicle_telemetry.h"
+#include "vehicle/vehicle_engine_sound_playback.h"
 
 float LNVehicleEngine::compute_crossfade_t(float p_value,
 		float p_lower_min,
@@ -77,9 +78,10 @@ void LNVehicleEngine::integrate_angular_velocity(float p_clutch_reaction_torque,
 	}
 
 	if (asp != nullptr) {
-		sound.set_sound_config(engine_settings->get_sound_config());
-		sound.set_stream_playback(asp->get_stream_playback());
-		sound.update(effective_throttle, get_rpm(), p_delta);
+		Ref<LNVehicleEngineSoundPlayback> engine_sound_playback = asp->get_stream_playback();
+		DEV_ASSERT(engine_sound_playback.is_valid());
+		engine_sound_playback->set_sound_config(engine_settings->get_sound_config());
+		engine_sound_playback->update(effective_throttle, get_rpm(), p_delta);
 	}
 }
 

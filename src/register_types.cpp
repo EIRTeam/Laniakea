@@ -67,6 +67,7 @@
 #include "vehicle/vehicle_drivetrain_debugger.h"
 #include "vehicle/vehicle_engine.h"
 #include "vehicle/vehicle_engine_settings.h"
+#include "vehicle/vehicle_engine_sound_playback.h"
 #include "vehicle/vehicle_settings.h"
 #include "vehicle/vehicle_suspension_macpherson_settings.h"
 #include "vehicle/vehicle_suspension_settings.h"
@@ -160,6 +161,8 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level) {
 	GDREGISTER_ABSTRACT_CLASS(DebugOverlay);
 	GDREGISTER_CLASS(NPCTurret);
 	GDREGISTER_ABSTRACT_CLASS(LNVehicleShaft);
+	GDREGISTER_CLASS(LNVehicleEngineSoundPlayback);
+	GDREGISTER_CLASS(LNVehicleEngineSoundStream);
 	GDREGISTER_CLASS(LNVehicleEngineSettings);
 	GDREGISTER_CLASS(LNVehicleDrivetrainSettings);
 	GDREGISTER_CLASS(LNVehicleSettings);
