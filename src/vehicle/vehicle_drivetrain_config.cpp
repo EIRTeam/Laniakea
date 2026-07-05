@@ -1,6 +1,7 @@
 #include "vehicle_drivetrain_config.h"
 
 #include "bind_macros.h"
+#include "godot_cpp/core/class_db.hpp"
 #include "godot_cpp/core/error_macros.hpp"
 
 void LNVehicleDrivetrainSettings::_bind_methods() {
@@ -11,6 +12,9 @@ void LNVehicleDrivetrainSettings::_bind_methods() {
 	MAKE_BIND_FLOAT(LNVehicleDrivetrainSettings, clutch_lock_threshold);
 	MAKE_BIND_FLOAT(LNVehicleDrivetrainSettings, clutch_response_rate);
 	MAKE_BIND_FLOAT(LNVehicleDrivetrainSettings, differential_inertia);
+
+	BIND_ENUM_CONSTANT(DifferentialType::LOCKED);
+	BIND_ENUM_CONSTANT(DifferentialType::OPEN);
 }
 
 float LNVehicleDrivetrainSettings::get_gear_ratio(int p_gear) const {

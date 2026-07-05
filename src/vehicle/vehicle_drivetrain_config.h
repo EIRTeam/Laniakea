@@ -2,6 +2,7 @@
 
 #include "bind_macros.h"
 #include "godot_cpp/classes/resource.hpp"
+#include "godot_cpp/core/binder_common.hpp"
 #include "godot_cpp/variant/packed_float32_array.hpp"
 
 using namespace godot;
@@ -9,11 +10,13 @@ using namespace godot;
 class LNVehicleDrivetrainSettings : public Resource {
 	GDCLASS(LNVehicleDrivetrainSettings, Resource);
 
-	enum class DifferentialType {
+public:
+	enum DifferentialType {
 		LOCKED,
 		OPEN
 	};
 
+private:
 	float gearbox_inertia = 0.02f;
 	float differential_inertia = 0.02f;
 	PackedFloat32Array negative_gearbox_ratios;
@@ -26,7 +29,7 @@ class LNVehicleDrivetrainSettings : public Resource {
 	float autoclutch_min = 1200.0f;
 	float autoclutch_max = 1800.0f;
 
-	DifferentialType differential_type = DifferentialType::LOCKED;
+	DifferentialType differential_type = DifferentialType::OPEN;
 
 public:
 	MAKE_SETTER_GETTER_FLOAT_VALUE(clutch_max_torque, clutch_max_torque);
@@ -44,3 +47,5 @@ public:
 
 	float get_gear_ratio(int p_gear) const;
 };
+
+VARIANT_ENUM_CAST(LNVehicleDrivetrainSettings::DifferentialType);

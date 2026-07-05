@@ -1,6 +1,7 @@
 #include "vehicle_differential.h"
 
 #include "vehicle/debug_icons.h"
+#include "vehicle/vehicle_drivetrain_config.h"
 int LNVehicleDifferential::get_output_count() const {
 	return 2;
 }
@@ -56,7 +57,7 @@ void LNVehicleDifferential::apply_downstream(const DownstreamData &p_data) {
 	});*/
 
 	const float ratio = drivetrain_settings->get_final_ratio();
-	const float differential_inertia = 0.0f;
+	const float differential_inertia = drivetrain_settings->get_differential_inertia();
 
 	float inertia = 0.0f;
 
@@ -70,14 +71,21 @@ void LNVehicleDifferential::apply_downstream(const DownstreamData &p_data) {
 	float left = 0.5f * total_torque + downstream_datas[0].net_reaction_torque;
 	float right = 0.5f * total_torque + downstream_datas[1].net_reaction_torque;
 
-	const float estimated_angular_velocity_x = downstream_datas[0].angular_velocity + (left / downstream_datas[0].inertia) * delta;
-	const float estimated_angular_velocity_y = downstream_datas[1].angular_velocity + (right / downstream_datas[1].inertia) * delta;
-	// Then how much torque do we need to add to make the wheels perfectly locked
-	float angular_delta = (estimated_angular_velocity_x - estimated_angular_velocity_y) * 0.5f;
-	float diff_locking_torque_x = downstream_datas[0].inertia * (angular_delta) / delta;
-	float diff_locking_torque_y = downstream_datas[1].inertia * angular_delta / delta;
-	left -= diff_locking_torque_x;
-	right += diff_locking_torque_y;
+	switch (drivetrain_settings->get_differential_type()) {
+		case LNVehicleDrivetrainSettings::DifferentialType::OPEN: {
+			// Nothing, split is already correct
+		} break;
+		case LNVehicleDrivetrainSettings::DifferentialType::LOCKED: {
+			const float estimated_angular_velocity_x = downstream_datas[0].angular_velocity + (left / downstream_datas[0].inertia) * delta;
+			const float estimated_angular_velocity_y = downstream_datas[1].angular_velocity + (right / downstream_datas[1].inertia) * delta;
+			// Then how much torque do we need to add to make the wheels perfectly locked
+			float angular_delta = (estimated_angular_velocity_x - estimated_angular_velocity_y) * 0.5f;
+			float diff_locking_torque_x = downstream_datas[0].inertia * (angular_delta) / delta;
+			float diff_locking_torque_y = downstream_datas[1].inertia * angular_delta / delta;
+			left -= diff_locking_torque_x;
+			right += diff_locking_torque_y;
+		}
+	}
 
 	left -= downstream_datas[0].net_reaction_torque;
 	right -= downstream_datas[1].net_reaction_torque;

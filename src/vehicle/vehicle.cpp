@@ -487,6 +487,7 @@ void LNVehicle::_notification(int p_what) {
 			add_shaft(GEARBOX_NAME, gearbox);
 
 			differential.instantiate();
+			differential->set_drivetrain_settings(vehicle_settings->get_drivetrain_settings());
 			add_shaft(DIFF_NAME, differential);
 
 			clutch.instantiate();

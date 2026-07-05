@@ -8,8 +8,10 @@ class LNVehicleDifferential : public LNVehicleShaft {
 
 	UpstreamData downstream_datas[2];
 	float delta = 0.0f;
+	Ref<LNVehicleDrivetrainSettings> drivetrain_settings;
 
 public:
+	MAKE_SETTER_GETTER_VALUE(Ref<LNVehicleDrivetrainSettings>, drivetrain_settings, drivetrain_settings);
 	virtual int get_output_count() const override;
 	virtual UpstreamData get_upstream_data() override;
 	virtual void apply_downstream(const DownstreamData &p_data) override;
