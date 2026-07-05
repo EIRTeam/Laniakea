@@ -112,9 +112,13 @@ void LNVehicleWheelShaft::_process_wheel_grounded(const LNVehicleSuspensionSetti
 	}
 
 	LNPhysics::apply_force(p_vehicle_node, force_n_plane, suspension_state.ground_hit_position - p_vehicle_node->get_global_position(), Color("RED"));
+	telemetry->push_line_graph_data_channel_update("tyres/grounded", LNVehicle::wheel_position_to_string(p_wheel_node->get_wheel_position()), 1.0f);
 }
 
 void LNVehicleWheelShaft::_process_wheel_airborne(LNVehicle *p_vehicle_node, LNVehicleWheel *p_wheel_node, const VehicleInputState &p_input_state, float p_delta) {
+	telemetry->push_line_graph_data_channel_update("tyres/force_longitudinal", LNVehicle::wheel_position_to_string(p_wheel_node->get_wheel_position()), 0.0f);
+	telemetry->push_line_graph_data_channel_update("tyres/force_lateral", LNVehicle::wheel_position_to_string(p_wheel_node->get_wheel_position()), 0.0f);
+	telemetry->push_line_graph_data_channel_update("tyres/grounded", LNVehicle::wheel_position_to_string(p_wheel_node->get_wheel_position()), 0.0f);
 }
 
 Vector3 LNVehicleWheelShaft::wheel_get_world_forward(LNVehicleWheel *p_wheel_node, LNVehicle *p_vehicle, const VehicleInputState &p_input_state) const {

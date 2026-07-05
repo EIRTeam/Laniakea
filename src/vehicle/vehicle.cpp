@@ -217,6 +217,7 @@ void LNVehicle::_physics_process(double p_delta) {
 	telemetry.push_line_graph_data_channel_update("tyres/wheel_angular_velocity", "fr", get_wheel_angular_velocity(LNVehicleWheelPosition::WHEEL_FR));
 	telemetry.push_line_graph_data_channel_update("tyres/wheel_angular_velocity", "rl", get_wheel_angular_velocity(LNVehicleWheelPosition::WHEEL_RL));
 	telemetry.push_line_graph_data_channel_update("tyres/wheel_angular_velocity", "rr", get_wheel_angular_velocity(LNVehicleWheelPosition::WHEEL_RR));
+
 	telemetry_control->update(&telemetry);
 #endif
 	drivetrain_debugger->update();
@@ -407,8 +408,9 @@ void LNVehicle::_ready() {
 	create_per_wheel_telemetry_channel(&telemetry, "tyres/wheel_angular_velocity", -150.0f, 150.0f);
 	create_per_wheel_telemetry_channel(&telemetry, "tyres/mechanical_trail", -0.5f, 0.5f);
 	create_per_wheel_telemetry_channel(&telemetry, "tyres/self_aligning_torque", -100.0f, 100.0f);
-	create_per_wheel_telemetry_channel(&telemetry, "tyres/force_longitudinal", -350.0f, 350.0f);
-	create_per_wheel_telemetry_channel(&telemetry, "tyres/force_lateral", -350.0f, 350.0f);
+	create_per_wheel_telemetry_channel(&telemetry, "tyres/force_longitudinal", -6500.0f, 6500.0f);
+	create_per_wheel_telemetry_channel(&telemetry, "tyres/force_lateral", -6500.0f, 6500.0f);
+	create_per_wheel_telemetry_channel(&telemetry, "tyres/grounded", 0.0f, 1.0f);
 	telemetry.create_line_graph_data_channel("tyre_test", -1.25, 1.25, 300, Span<VehicleTelemetry::LineGraphSubchannelCreateInfo>({ VehicleTelemetry::LineGraphSubchannelCreateInfo { .name = "normalized_longitudinal_tire_force" }, VehicleTelemetry::LineGraphSubchannelCreateInfo { .name = "normalized_lateral_tire_force" }, VehicleTelemetry::LineGraphSubchannelCreateInfo { .name = "self_centering_torque" } }));
 
 	Ref<LNVehicleTyreLastMinute> last_minute;
